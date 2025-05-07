@@ -1,4 +1,4 @@
-# compressor_model_app.py
+# compressor_model_app.py 
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -7,7 +7,7 @@ import pandas as pd
 # Step 1: Define System Boundaries and Components
 # ----------------------------
 st.set_page_config(page_title="Air Compressor Energy Model", layout="wide")
-st.title("Compressed Air Infrastructure Optimization for Logistics centres")
+st.title("Industrial Air Compressor System Energy Modeling")
 
 st.sidebar.header("System Parameters")
 
@@ -32,6 +32,10 @@ ambient_pressure = ambient_pressure_bar * 100000
 set_pressure_bar = st.sidebar.number_input("Compressor Set Pressure (bar)", min_value=1.0, value=7.0)
 set_pressure = set_pressure_bar * 100000
 
+# Receiver Tank Volume
+receiver_tank_liters = st.sidebar.number_input("Receiver Tank Volume (liters)", min_value=100.0, value=1000.0, step=50.0)
+receiver_tank_m3 = receiver_tank_liters / 1000.0
+
 # Pressure Drops
 st.sidebar.subheader("Optional Pressure Drops")
 aftercooler_drop = st.sidebar.number_input("Aftercooler Pressure Drop (bar)", min_value=0.0, value=0.1)
@@ -49,6 +53,9 @@ air_density = 1.225
 def calculate_ideal_work(Pa, P2, Ta, Qm):
     term = (P2 / Pa)**((k - 1) / k) - 1
     return (k / (k - 1)) * Qm * R * Ta * term
+
+def calculate_tank_energy(Pa, P2, V):
+    return (P2 * V / (k - 1)) * ((P2 / Pa)**((k - 1) / k) - 1)
 
 # Step 1 Output
 total_ideal_work = 0
@@ -124,104 +131,101 @@ if uploaded_file:
         st.write("### Compressor Efficiency Summary Table")
         st.dataframe(pd.DataFrame(summaries))
 
-# ----------------------------
-# Step 5: Effectiveness Evaluation
-# ----------------------------
-st.subheader("Step 5: Effectiveness Simulation")
-with st.expander("🔁 Compare with Modified Configuration"):
-    mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar)
-    mod_aftercooler_drop = st.number_input("Modified Aftercooler Drop (bar)", value=aftercooler_drop)
-    mod_dryer_drop = st.number_input("Modified Dryer Drop (bar)", value=dryer_drop)
-    mod_filter_drop = st.number_input("Modified Filter Drop (bar)", value=filter_drop)
+    # ----------------------------
+    # Step 5: Effectiveness Evaluation
+    # ----------------------------
+    st.subheader("Step 5: Effectiveness Simulation")
+    with st.expander("🔁 Compare with Modified Configuration"):
+        mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar)
+        mod_aftercooler_drop = st.number_input("Modified Aftercooler Drop (bar)", value=aftercooler_drop)
+        mod_dryer_drop = st.number_input("Modified Dryer Drop (bar)", value=dryer_drop)
+        mod_filter_drop = st.number_input("Modified Filter Drop (bar)", value=filter_drop)
 
-    mod_total_drop = (mod_aftercooler_drop + mod_dryer_drop + mod_filter_drop) * 100000
-    mod_set_pressure = mod_set_pressure_bar * 100000 + mod_total_drop
+        mod_total_drop = (mod_aftercooler_drop + mod_dryer_drop + mod_filter_drop) * 100000
+        mod_set_pressure = mod_set_pressure_bar * 100000 + mod_total_drop
 
-    effectiveness_rows = []
-    total_energy_base = 0
-    total_energy_mod = 0
-    total_cost_base = 0
-    total_cost_mod = 0
-    total_base_ideal_power = 0
-    total_mod_ideal_power = 0
-    total_base_efficiency = 0
-    total_mod_efficiency = 0
-    count = 0
+        effectiveness_rows = []
+        total_energy_base = 0
+        total_energy_mod = 0
+        total_cost_base = 0
+        total_cost_mod = 0
+        total_base_efficiency = 0
+        total_mod_efficiency = 0
+        count = 0
 
-    for i in range(1, 4):
-        flow_col = f"Flow{i}"
-        temp_col = f"Temp{i}"
-        power_col = f"Power{i}"
+        base_tank_energy_kWh = calculate_tank_energy(ambient_pressure, adjusted_set_pressure, receiver_tank_m3) / 3600
+        mod_tank_energy_kWh = calculate_tank_energy(ambient_pressure, mod_set_pressure, receiver_tank_m3) / 3600
 
-        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
-            flow_m3s = df[flow_col] / 60
-            temp_K = df[temp_col] + 273.15
-            Qm = flow_m3s * air_density
+        for i in range(1, 4):
+            flow_col = f"Flow{i}"
+            temp_col = f"Temp{i}"
+            power_col = f"Power{i}"
 
-            base_ideal_power = df[f"Ideal_Power_{i}_kW"]
-            mod_ideal_power = calculate_ideal_work(ambient_pressure, mod_set_pressure, temp_K, Qm) / 1000
+            if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
+                flow_m3s = df[flow_col] / 60
+                temp_K = df[temp_col] + 273.15
+                Qm = flow_m3s * air_density
 
-            ε = (base_ideal_power - mod_ideal_power) / base_ideal_power
-            ε = ε.clip(lower=0, upper=1)
+                base_ideal_power = df[f"Ideal_Power_{i}_kW"]
+                mod_ideal_power = calculate_ideal_work(ambient_pressure, mod_set_pressure, temp_K, Qm) / 1000
 
-            interval_hours = 5 / 60
-            energy_base = (base_ideal_power * interval_hours).sum()
-            energy_mod = (mod_ideal_power * interval_hours).sum()
-            cost_base = energy_base * 0.12
-            cost_mod = energy_mod * 0.12
+                energy_base = (base_ideal_power * (5 / 60)).sum() + base_tank_energy_kWh
+                energy_mod = (mod_ideal_power * (5 / 60)).sum() + mod_tank_energy_kWh
+                cost_base = energy_base * 0.12
+                cost_mod = energy_mod * 0.12
 
-            actual_power = df[power_col]
-            base_efficiency = base_ideal_power / actual_power
-            mod_efficiency = mod_ideal_power / actual_power
-            base_efficiency = base_efficiency.clip(upper=1.5)
-            mod_efficiency = mod_efficiency.clip(upper=1.5)
+                actual_power = df[power_col]
+                base_efficiency = base_ideal_power / actual_power
+                mod_efficiency = mod_ideal_power / actual_power
+                base_efficiency = base_efficiency.clip(upper=1.5)
+                mod_efficiency = mod_efficiency.clip(upper=1.5)
 
+                effectiveness = 1 - (energy_mod / energy_base)
+
+                effectiveness_rows.append({
+                    "Compressor": f"C{i}",
+                    "Effectiveness (%)": f"{effectiveness * 100:.2f}",
+                    "Energy Base (kWh)": f"{energy_base:.2f}",
+                    "Energy Mod (kWh)": f"{energy_mod:.2f}",
+                    "Tank Energy Base (kWh)": f"{base_tank_energy_kWh:.2f}",
+                    "Tank Energy Mod (kWh)": f"{mod_tank_energy_kWh:.2f}",
+                    "Cost Base (€/yr)": f"{cost_base:.2f}",
+                    "Cost Mod (€/yr)": f"{cost_mod:.2f}",
+                    "Base Efficiency (%)": f"{(base_efficiency.mean() * 100):.2f}",
+                    "Mod Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
+                })
+
+                total_energy_base += energy_base
+                total_energy_mod += energy_mod
+                total_cost_base += cost_base
+                total_cost_mod += cost_mod
+                total_base_efficiency += base_efficiency.mean()
+                total_mod_efficiency += mod_efficiency.mean()
+                count += 1
+
+        if effectiveness_rows and count > 0:
             effectiveness_rows.append({
-                "Compressor": f"C{i}",
-                "Avg Base Ideal Power (kW)": f"{base_ideal_power.mean():.2f}",
-                "Avg Mod Ideal Power (kW)": f"{mod_ideal_power.mean():.2f}",
-                "Effectiveness (%)": f"{(ε.mean() * 100):.2f}",
-                "Energy Base (kWh)": f"{energy_base:.2f}",
-                "Energy Mod (kWh)": f"{energy_mod:.2f}",
-                "Cost Base (€/yr)": f"{cost_base:.2f}",
-                "Cost Mod (€/yr)": f"{cost_mod:.2f}",
-                "Base Efficiency (%)": f"{(base_efficiency.mean() * 100):.2f}",
-                "Mod Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
+                "Compressor": "System Total",
+                "Effectiveness (%)": f"{(1 - (total_energy_mod / total_energy_base)) * 100:.2f}",
+                "Energy Base (kWh)": f"{total_energy_base:.2f}",
+                "Energy Mod (kWh)": f"{total_energy_mod:.2f}",
+                "Tank Energy Base (kWh)": f"{base_tank_energy_kWh:.2f}",
+                "Tank Energy Mod (kWh)": f"{mod_tank_energy_kWh:.2f}",
+                "Cost Base (€/yr)": f"{total_cost_base:.2f}",
+                "Cost Mod (€/yr)": f"{total_cost_mod:.2f}",
+                "Base Efficiency (%)": f"{(total_base_efficiency / count * 100):.2f}",
+                "Mod Efficiency (%)": f"{(total_mod_efficiency / count * 100):.2f}"
             })
 
-            total_energy_base += energy_base
-            total_energy_mod += energy_mod
-            total_cost_base += cost_base
-            total_cost_mod += cost_mod
-            total_base_ideal_power += base_ideal_power.mean()
-            total_mod_ideal_power += mod_ideal_power.mean()
-            total_base_efficiency += base_efficiency.mean()
-            total_mod_efficiency += mod_efficiency.mean()
-            count += 1
+            st.write("### Effectiveness Comparison Table")
+            df_summary = pd.DataFrame(effectiveness_rows)
+            st.dataframe(df_summary)
 
-    if effectiveness_rows and count > 0:
-        effectiveness_rows.append({
-            "Compressor": "System Total",
-            "Avg Base Ideal Power (kW)": f"{total_base_ideal_power:.2f}",
-            "Avg Mod Ideal Power (kW)": f"{total_mod_ideal_power:.2f}",
-            "Effectiveness (%)": f"{((total_base_ideal_power - total_mod_ideal_power) / total_base_ideal_power * 100):.2f}",
-            "Energy Base (kWh)": f"{total_energy_base:.2f}",
-            "Energy Mod (kWh)": f"{total_energy_mod:.2f}",
-            "Cost Base (€/yr)": f"{total_cost_base:.2f}",
-            "Cost Mod (€/yr)": f"{total_cost_mod:.2f}",
-            "Base Efficiency (%)": f"{(total_base_efficiency / count * 100):.2f}",
-            "Mod Efficiency (%)": f"{(total_mod_efficiency / count * 100):.2f}"
-        })
+            st.write("### 🌍 Carbon Emissions (TCO₂e)")
+            co2_factor = 0.341 / 1000  # TCO2e per kWh
+            tco2e_base = total_energy_base * co2_factor
+            tco2e_mod = total_energy_mod * co2_factor
 
-        st.write("### Effectiveness Comparison Table")
-        df_summary = pd.DataFrame(effectiveness_rows)
-        st.dataframe(df_summary)
-
-        st.write("### 🌍 Carbon Emissions (TCO₂e)")
-        co2_factor = 0.341 / 1000  # 0.341 TCO2e per MWh = 0.000341 per kWh
-        tco2e_base = total_energy_base * co2_factor
-        tco2e_mod = total_energy_mod * co2_factor
-
-        st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
-        st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
-        st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
+            st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
+            st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
+            st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
