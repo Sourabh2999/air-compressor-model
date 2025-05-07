@@ -29,79 +29,68 @@ st.sidebar.subheader("Operating Conditions")
 ambient_temp_c = st.sidebar.number_input("Ambient Temperature (°C)", min_value=-40.0, value=20.0)
 ambient_temp = ambient_temp_c + 273.15
 ambient_pressure_bar = st.sidebar.number_input("Ambient Pressure (bar)", min_value=0.5, value=1.013)
-ambient_pressure = ambient_pressure_bar * 100000  # Convert to Pascals
+ambient_pressure = ambient_pressure_bar * 100000
 set_pressure_bar = st.sidebar.number_input("Compressor Set Pressure (bar)", min_value=1.0, value=7.0)
-set_pressure = set_pressure_bar * 100000  # Convert to Pascals
+set_pressure = set_pressure_bar * 100000
 
 # Constants
-R = 287  # J/kg.K
-k = 1.4  # Adiabatic index
-air_density = 1.225  # kg/m^3 at sea level
+R = 287
+k = 1.4
+air_density = 1.225
 
 def calculate_ideal_work(Pa, P2, Ta, Qm):
-    """Compute ideal compressor work (adiabatic compression)"""
     term = (P2 / Pa)**((k - 1) / k) - 1
     return (k / (k - 1)) * Qm * R * Ta * term
 
-# Calculate total ideal work for 3 compressors
+# Step 1 Output
 total_ideal_work = 0
 for i in range(3):
-    flow_rate = flow_rates[i] / 60  # m3/s
+    flow_rate = flow_rates[i] / 60
     Qm = flow_rate * air_density
     work = calculate_ideal_work(ambient_pressure, set_pressure, ambient_temp, Qm)
     total_ideal_work += work
 
 st.subheader("Step 1: Ideal Compressor Work Calculation")
 st.markdown(f"**Total Ideal Compressor Work (3 Compressors):** {total_ideal_work/1000:.2f} kW")
+
 # ----------------------------
-# Step 2: Upload Historical Data
+# Step 2: Upload Historical Compressor Data
 # ----------------------------
 st.subheader("Step 2: Upload Historical Compressor Data")
-uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
+uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file, parse_dates=[0])
-    df.columns = [col.strip() for col in df.columns]
+    if uploaded_file.name.endswith(".xlsx"):
+        df = pd.read_excel(uploaded_file)
+    else:
+        df = pd.read_csv(uploaded_file)
 
-    # Rename expected columns
-    df.rename(columns={
-        df.columns[0]: "Timestamp",
-        df.columns[1]: "System_Flow_m3_min",
-        df.columns[2]: "System_Power_kW",
-        df.columns[3]: "System_Temp_C",
-        df.columns[4]: "Flow1",
-        df.columns[5]: "Power1",
-        df.columns[6]: "Temp1",
-        df.columns[7]: "Flow2",
-        df.columns[8]: "Power2",
-        df.columns[9]: "Temp2",
-        df.columns[10]: "Flow3",
-        df.columns[11]: "Power3",
-        df.columns[12]: "Temp3",
-    }, inplace=True)
+    rename_map = {
+        "C1 - electrical power consumption": "Power1",
+        "C1 - delivery volume flow rate": "Flow1",
+        "C1 - intake temperature": "Temp1",
+        "C2 - electrical power consumption": "Power2",
+        "C2 - delivery volume flow rate": "Flow2",
+        "C2 - intake temperature": "Temp2",
+        "C3 - electrical power consumption": "Power3",
+        "C3 - delivery volume flow rate": "Flow3",
+        "C3 - intake temperature": "Temp3",
+        "CO1 - electrical power consumption": "System_Power_kW",
+        "CO1 - delivery volume flow rate": "System_Flow_m3_min",
+        "Timestamp": "Timestamp"
+    }
+    df.rename(columns=rename_map, inplace=True)
 
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'], format="%m/%d/%Y %H:%M")
-
-    st.write("### Preview of Uploaded Data")
+    st.write("### File Preview")
     st.dataframe(df.head())
-
-    st.write("### Basic System Statistics")
-    st.metric("Avg System Flow (m³/min)", f"{df['System_Flow_m3_min'].mean():.2f}")
-    st.metric("Avg System Power (kW)", f"{df['System_Power_kW'].mean():.2f}")
-    st.metric("Avg System Temp (°C)", f"{df['System_Temp_C'].mean():.2f}")
-
-    st.write("### Per Compressor Stats")
-    for i in range(1, 4):
-        st.markdown(f"#### Compressor {i}")
-        st.metric("Avg Flow (m³/min)", f"{df[f'Flow{i}'].mean():.2f}")
-        st.metric("Avg Power (kW)", f"{df[f'Power{i}'].mean():.2f}")
-        st.metric("Avg Temp (°C)", f"{df[f'Temp{i}'].mean():.2f}")
 
     st.write("### Time Series: Flow and Power")
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(df['Timestamp'], df['System_Flow_m3_min'], label='System Flow')
+    if 'System_Flow_m3_min' in df.columns:
+        ax.plot(df['Timestamp'], df['System_Flow_m3_min'], label='System Flow')
     for i in range(1, 4):
-        ax.plot(df['Timestamp'], df[f'Flow{i}'], label=f'Flow C{i}')
+        if f'Flow{i}' in df.columns:
+            ax.plot(df['Timestamp'], df[f'Flow{i}'], label=f'Flow C{i}')
     ax.set_xlabel("Time")
     ax.set_ylabel("Flow (m³/min)")
     ax.set_title("Flow per Compressor vs System")
@@ -109,9 +98,11 @@ if uploaded_file:
     st.pyplot(fig)
 
     fig, ax2 = plt.subplots(figsize=(12, 6))
-    ax2.plot(df['Timestamp'], df['System_Power_kW'], label='System Power')
+    if 'System_Power_kW' in df.columns:
+        ax2.plot(df['Timestamp'], df['System_Power_kW'], label='System Power')
     for i in range(1, 4):
-        ax2.plot(df['Timestamp'], df[f'Power{i}'], label=f'Power C{i}')
+        if f'Power{i}' in df.columns:
+            ax2.plot(df['Timestamp'], df[f'Power{i}'], label=f'Power C{i}')
     ax2.set_xlabel("Time")
     ax2.set_ylabel("Power (kW")
     ax2.set_title("Power per Compressor vs System")
@@ -127,17 +118,13 @@ if uploaded_file:
         temp_col = f'Temp{i}'
         power_col = f'Power{i}'
 
-        # Convert to SI units
-        flow_m3s = df[flow_col] / 60  # m3/min to m3/s
-        temp_K = df[temp_col] + 273.15  # °C to K
-        Qm = flow_m3s * air_density  # mass flow rate
+        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
+            flow_m3s = df[flow_col] / 60
+            temp_K = df[temp_col] + 273.15
+            Qm = flow_m3s * air_density
+            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, set_pressure, temp_K, Qm) / 1000
+            df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
+            df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
-        # Ideal power
-        df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, set_pressure, temp_K, Qm) / 1000
-
-        # Efficiency = ideal / actual
-        df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
-        df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)  # limit outliers
-
-        st.write(f"#### Compressor {i} Efficiency")
-        st.line_chart(df[["Timestamp", f"Efficiency_{i}"],].set_index("Timestamp"))
+            st.write(f"#### Compressor {i} Efficiency")
+            st.line_chart(df[["Timestamp", f"Efficiency_{i}"].copy()].set_index("Timestamp"))
