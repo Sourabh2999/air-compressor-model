@@ -114,7 +114,6 @@ if summaries:
     st.write("### Compressor Efficiency Summary Table")
     st.dataframe(pd.DataFrame(summaries))
 
-
     # ----------------------------
     # Step 4: Receiver Tank Storage Analysis
 # ----------------------------
@@ -228,30 +227,4 @@ with st.expander("🔁 Compare with Modified Configuration"):
         st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
         st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
         st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
-    summaries = []
-    for i in range(1, 4):
-        flow_col = f'Flow{i}'
-        temp_col = f'Temp{i}'
-        power_col = f'Power{i}'
-
-        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
-            flow_m3s = df[flow_col] / 60
-            temp_K = df[temp_col] + 273.15
-            Qm = flow_m3s * air_density
-            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm) / 1000
-            df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
-            df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
-
-            summaries.append({
-            "Compressor": f"C{i}",
-            "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
-            "Avg Power (kW)": f"{df[power_col].mean():.2f}",
-            "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
-            "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
-            "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
-            "Avg Duty Cycle (%)": f"{(df[f'ON{i}'].mean() / 300 * 100):.2f}" if f"ON{i}" in df.columns else "N/A"
-        })
-
-    if summaries:
-        st.write("### Compressor Efficiency Summary Table")
-        st.dataframe(pd.DataFrame(summaries))
+   
