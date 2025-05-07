@@ -80,11 +80,6 @@ if uploaded_file:
     st.write("### Preview Data")
     st.dataframe(df.head())
 
-    # ----------------------------
-    # Step 3: Real Compressor Efficiency Summary
-    # ----------------------------
-    st.subheader("Step 3: Real Compressor Efficiency Summary")
-
 
 
   # ----------------------------
