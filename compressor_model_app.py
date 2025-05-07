@@ -137,7 +137,7 @@ if uploaded_file:
         mod_total_drop = (mod_aftercooler_drop + mod_dryer_drop + mod_filter_drop) * 100000
         mod_set_pressure = mod_set_pressure_bar * 100000 + mod_total_drop
 
-        effectiveness_rows = []
+          effectiveness_rows = []
         for i in range(1, 4):
             flow_col = f'Flow{i}'
             temp_col = f'Temp{i}'
@@ -154,13 +154,30 @@ if uploaded_file:
                 ε = (base_ideal_power - mod_ideal_power) / base_ideal_power
                 ε = ε.clip(lower=0, upper=1)
 
+                # Energy calculations (assuming 5-minute intervals)
+                interval_hours = 5 / 60
+                energy_base = (base_ideal_power * interval_hours).sum()
+                energy_mod = (mod_ideal_power * interval_hours).sum()
+                cost_base = energy_base * 0.12
+                cost_mod = energy_mod * 0.12
+
+                actual_power = df[power_col]
+                mod_efficiency = mod_ideal_power / actual_power
+                mod_efficiency = mod_efficiency.clip(upper=1.5)
+
                 effectiveness_rows.append({
                     "Compressor": f"C{i}",
                     "Avg Base Ideal Power (kW)": f"{base_ideal_power.mean():.2f}",
                     "Avg Mod Ideal Power (kW)": f"{mod_ideal_power.mean():.2f}",
-                    "Effectiveness (%)": f"{(ε.mean() * 100):.2f}"
+                    "Effectiveness (%)": f"{(ε.mean() * 100):.2f}",
+                    "Energy Base (kWh)": f"{energy_base:.2f}",
+                    "Energy Mod (kWh)": f"{energy_mod:.2f}",
+                    "Cost Base (€/yr)": f"{cost_base:.2f}",
+                    "Cost Mod (€/yr)": f"{cost_mod:.2f}",
+                    "Mod Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
                 })
 
         if effectiveness_rows:
             st.write("### Effectiveness Comparison Table")
             st.dataframe(pd.DataFrame(effectiveness_rows))
+
