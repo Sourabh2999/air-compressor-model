@@ -114,13 +114,6 @@ if summaries:
     st.write("### Compressor Efficiency Summary Table")
     st.dataframe(pd.DataFrame(summaries))
 
-    
-
-    
-
-
-
-    
 
 
     # ----------------------------
