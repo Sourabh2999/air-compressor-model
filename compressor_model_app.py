@@ -130,6 +130,9 @@ if uploaded_file:
     # ----------------------------
 # Step 5: Effectiveness Evaluation
 # ----------------------------
+# ----------------------------
+# Step 5: Effectiveness Evaluation
+# ----------------------------
 st.subheader("Step 5: Effectiveness Simulation")
 with st.expander("🔁 Compare with Modified Configuration"):
     mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar)
@@ -141,6 +144,15 @@ with st.expander("🔁 Compare with Modified Configuration"):
     mod_set_pressure = mod_set_pressure_bar * 100000 + mod_total_drop
 
     effectiveness_rows = []
+    total_energy_base = 0
+    total_energy_mod = 0
+    total_cost_base = 0
+    total_cost_mod = 0
+    total_base_ideal_power = 0
+    total_mod_ideal_power = 0
+    total_efficiency = 0
+    count = 0
+
     for i in range(1, 4):
         flow_col = f'Flow{i}'
         temp_col = f'Temp{i}'
@@ -157,7 +169,6 @@ with st.expander("🔁 Compare with Modified Configuration"):
             ε = (base_ideal_power - mod_ideal_power) / base_ideal_power
             ε = ε.clip(lower=0, upper=1)
 
-            # Energy calculations (assuming 5-minute intervals)
             interval_hours = 5 / 60
             energy_base = (base_ideal_power * interval_hours).sum()
             energy_mod = (mod_ideal_power * interval_hours).sum()
@@ -180,6 +191,27 @@ with st.expander("🔁 Compare with Modified Configuration"):
                 "Mod Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
             })
 
-    if effectiveness_rows:
+            total_energy_base += energy_base
+            total_energy_mod += energy_mod
+            total_cost_base += cost_base
+            total_cost_mod += cost_mod
+            total_base_ideal_power += base_ideal_power.mean()
+            total_mod_ideal_power += mod_ideal_power.mean()
+            total_efficiency += mod_efficiency.mean()
+            count += 1
+
+    if effectiveness_rows and count > 0:
+        effectiveness_rows.append({
+            "Compressor": "System Total",
+            "Avg Base Ideal Power (kW)": f"{total_base_ideal_power:.2f}",
+            "Avg Mod Ideal Power (kW)": f"{total_mod_ideal_power:.2f}",
+            "Effectiveness (%)": f"{((total_base_ideal_power - total_mod_ideal_power) / total_base_ideal_power * 100):.2f}",
+            "Energy Base (kWh)": f"{total_energy_base:.2f}",
+            "Energy Mod (kWh)": f"{total_energy_mod:.2f}",
+            "Cost Base (€/yr)": f"{total_cost_base:.2f}",
+            "Cost Mod (€/yr)": f"{total_cost_mod:.2f}",
+            "Mod Efficiency (%)": f"{(total_efficiency / count * 100):.2f}"
+        })
+
         st.write("### Effectiveness Comparison Table")
         st.dataframe(pd.DataFrame(effectiveness_rows))
