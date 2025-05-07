@@ -145,6 +145,7 @@ else:
 st.markdown(f"**Effective Storage Capacity:** {storage_capacity_nm3:.2f} Nm³")
 st.markdown(f"**Estimated Buffer Time:** {buffer_minutes:.1f} minutes at average system flow of {avg_system_flow:.2f} m³/min")
 
+
     # ----------------------------
     # Step 5: Effectiveness Simulation
 # ----------------------------
