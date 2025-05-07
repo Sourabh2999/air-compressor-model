@@ -7,7 +7,7 @@ import pandas as pd
 # Step 1: Define System Boundaries and Components
 # ----------------------------
 st.set_page_config(page_title="Air Compressor Energy Model", layout="wide")
-st.title("Industrial Air Compressor System Energy Modeling")
+st.title("Compressed Air Infrastructure Optimization for Logistics centres")
 
 st.sidebar.header("System Parameters")
 
