@@ -124,13 +124,7 @@ if uploaded_file:
         st.write("### Compressor Efficiency Summary Table")
         st.dataframe(pd.DataFrame(summaries))
 
-    # ----------------------------
-    # Step 5: Effectiveness Evaluation
-    # ----------------------------
-    # ----------------------------
-# Step 5: Effectiveness Evaluation
-# ----------------------------
-# ----------------------------
+  # ----------------------------
 # Step 5: Effectiveness Evaluation
 # ----------------------------
 st.subheader("Step 5: Effectiveness Simulation")
@@ -150,7 +144,8 @@ with st.expander("🔁 Compare with Modified Configuration"):
     total_cost_mod = 0
     total_base_ideal_power = 0
     total_mod_ideal_power = 0
-    total_efficiency = 0
+    total_base_efficiency = 0
+    total_mod_efficiency = 0
     count = 0
 
     for i in range(1, 4):
@@ -176,7 +171,9 @@ with st.expander("🔁 Compare with Modified Configuration"):
             cost_mod = energy_mod * 0.12
 
             actual_power = df[power_col]
+            base_efficiency = base_ideal_power / actual_power
             mod_efficiency = mod_ideal_power / actual_power
+            base_efficiency = base_efficiency.clip(upper=1.5)
             mod_efficiency = mod_efficiency.clip(upper=1.5)
 
             effectiveness_rows.append({
@@ -188,6 +185,7 @@ with st.expander("🔁 Compare with Modified Configuration"):
                 "Energy Mod (kWh)": f"{energy_mod:.2f}",
                 "Cost Base (€/yr)": f"{cost_base:.2f}",
                 "Cost Mod (€/yr)": f"{cost_mod:.2f}",
+                "Base Efficiency (%)": f"{(base_efficiency.mean() * 100):.2f}",
                 "Mod Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
             })
 
@@ -197,7 +195,8 @@ with st.expander("🔁 Compare with Modified Configuration"):
             total_cost_mod += cost_mod
             total_base_ideal_power += base_ideal_power.mean()
             total_mod_ideal_power += mod_ideal_power.mean()
-            total_efficiency += mod_efficiency.mean()
+            total_base_efficiency += base_efficiency.mean()
+            total_mod_efficiency += mod_efficiency.mean()
             count += 1
 
     if effectiveness_rows and count > 0:
@@ -210,8 +209,33 @@ with st.expander("🔁 Compare with Modified Configuration"):
             "Energy Mod (kWh)": f"{total_energy_mod:.2f}",
             "Cost Base (€/yr)": f"{total_cost_base:.2f}",
             "Cost Mod (€/yr)": f"{total_cost_mod:.2f}",
-            "Mod Efficiency (%)": f"{(total_efficiency / count * 100):.2f}"
+            "Base Efficiency (%)": f"{(total_base_efficiency / count * 100):.2f}",
+            "Mod Efficiency (%)": f"{(total_mod_efficiency / count * 100):.2f}"
         })
 
         st.write("### Effectiveness Comparison Table")
-        st.dataframe(pd.DataFrame(effectiveness_rows))
+        df_summary = pd.DataFrame(effectiveness_rows)
+        st.dataframe(df_summary)
+
+        st.write("### 📊 Cost and Energy Comparison")
+        chart_data = df_summary[df_summary['Compressor'] == "System Total"][[
+            "Energy Base (kWh)", "Energy Mod (kWh)", "Cost Base (€/yr)", "Cost Mod (€/yr)"
+        ]].T
+        chart_data.columns = ["Value"]
+        st.bar_chart(chart_data)
+
+        st.write("### 📊 Efficiency Comparison")
+        efficiency_chart = df_summary[df_summary['Compressor'] == "System Total"][[
+            "Base Efficiency (%)", "Mod Efficiency (%)"
+        ]].T
+        efficiency_chart.columns = ["Efficiency"]
+        st.bar_chart(efficiency_chart)
+
+        st.write("### 🌍 Carbon Emissions (TCO₂e)")
+        co2_factor = 0.341 / 1000  # 0.341 TCO2e per MWh = 0.000341 per kWh
+        tco2e_base = total_energy_base * co2_factor
+        tco2e_mod = total_energy_mod * co2_factor
+
+        st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
+        st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
+        st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
