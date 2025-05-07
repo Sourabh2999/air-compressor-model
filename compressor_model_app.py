@@ -32,20 +32,19 @@ ambient_pressure = ambient_pressure_bar * 100000
 set_pressure_bar = st.sidebar.number_input("Compressor Set Pressure (bar)", min_value=1.0, value=7.0)
 set_pressure = set_pressure_bar * 100000
 
-# Receiver Tank Volume
-st.sidebar.subheader("Receiver Tank")
-receiver_tank_liters = st.sidebar.number_input("Receiver Tank Volume (liters)", min_value=100.0, value=1000.0, step=50.0)
-receiver_tank_m3 = receiver_tank_liters / 1000.0
-total_pressure_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000  # bar to Pa
-adjusted_set_pressure = set_pressure + total_pressure_drop
-
 # Pressure Drops
 st.sidebar.subheader("Optional Pressure Drops")
 aftercooler_drop = st.sidebar.number_input("Aftercooler Pressure Drop (bar)", min_value=0.0, value=0.1)
 dryer_drop = st.sidebar.number_input("Dryer Pressure Drop (bar)", min_value=0.0, value=0.2)
 filter_drop = st.sidebar.number_input("Filter Pressure Drop (bar)", min_value=0.0, value=0.1)
 
+total_pressure_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000  # bar to Pa
+adjusted_set_pressure = set_pressure + total_pressure_drop
 
+# Receiver Tank Volume
+st.sidebar.subheader("Receiver Tank")
+receiver_tank_liters = st.sidebar.number_input("Receiver Tank Volume (liters)", min_value=100.0, value=1000.0, step=50.0)
+receiver_tank_m3 = receiver_tank_liters / 1000.0
 
 # Constants
 R = 287
