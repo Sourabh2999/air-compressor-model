@@ -1,9 +1,8 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-
 st.set_page_config(page_title="Compressed Air Optimization", layout="wide")
 st.title("Compressed Air Infrastructure Optimization for Logistics Centres")
+import pandas as pd
+import numpy as np
 
 # Define constants
 air_density = 1.2  # kg/m^3
@@ -56,7 +55,6 @@ with st.expander("⚙️ System Configuration"):
 # ----------------------------
 st.subheader("Step 2: Upload Compressor Data")
 uploaded_file = st.file_uploader("Upload Excel or CSV file with compressor data", type=["csv", "xlsx"])
-
 if uploaded_file:
     if uploaded_file.name.endswith(".csv"):
         df = pd.read_csv(uploaded_file)
@@ -67,15 +65,15 @@ if uploaded_file:
         "C1 - delivery volume flow rate": "Flow1",
         "C1 - airend discharge temperature": "Temp1",
         "C1 - electrical power consumption": "Power1",
-        "C1 ON Time": "ON1",
+        "C1 On Time": "ON1",
         "C2 - delivery volume flow rate": "Flow2",
         "C2 - airend discharge temperature": "Temp2",
         "C2 - electrical power consumption": "Power2",
-        "C2 ON Time": "ON2",
+        "C2 On Time": "ON2",
         "C3 - delivery volume flow rate": "Flow3",
         "C3 - airend discharge temperature": "Temp3",
         "C3 - electrical power consumption": "Power3",
-        "C3 ON Time": "ON3"
+        "C3 On Time": "ON3"
     }, inplace=True)
 
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], format="%m/%d/%Y %H:%M", errors='coerce')
@@ -115,6 +113,7 @@ if uploaded_file:
     if summaries:
         st.write("### Compressor Efficiency Summary Table")
         st.dataframe(pd.DataFrame(summaries))
+
 
     # ----------------------------
     # Step 4: Receiver Tank Storage Analysis
