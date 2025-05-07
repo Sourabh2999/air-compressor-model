@@ -85,8 +85,65 @@ if uploaded_file:
     # ----------------------------
     st.subheader("Step 3: Real Compressor Efficiency Summary")
 
+
+
+  # ----------------------------
+# Step 3: Real Compressor Efficiency Summary
 # ----------------------------
-# Step 5: Effectiveness Simulation
+st.subheader("Step 3: Real Compressor Efficiency Summary")
+
+summaries = []
+for i in range(1, 4):
+    flow_col = f'Flow{i}'
+    temp_col = f'Temp{i}'
+    power_col = f'Power{i}'
+
+    if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
+        flow_m3s = df[flow_col] / 60
+        temp_K = df[temp_col] + 273.15
+        Qm = flow_m3s * air_density
+        df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm) / 1000
+        df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
+        df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
+
+        summaries.append({
+            "Compressor": f"C{i}",
+            "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
+            "Avg Power (kW)": f"{df[power_col].mean():.2f}",
+            "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
+            "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
+            "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
+        })
+
+if summaries:
+    st.write("### Compressor Efficiency Summary Table")
+    st.dataframe(pd.DataFrame(summaries))
+
+
+    # ----------------------------
+    # Step 4: Receiver Tank Storage Analysis
+# ----------------------------
+st.subheader("Step 4: Receiver Tank Storage Analysis")
+
+tank_volume_m3 = receiver_volume / 1000  # liters to m³
+pressure_range_bar = st.number_input("Receiver Tank Pressure Range (bar)", min_value=0.1, value=1.0, key="tank_range")
+
+p1 = adjusted_set_pressure / 100000  # to bar
+p2 = p1 + pressure_range_bar
+
+storage_capacity_nm3 = tank_volume_m3 * (p2 - p1) / 1.013  # using standard pressure as 1.013 bar
+avg_system_flow = df[[col for col in df.columns if "Flow" in col]].mean(axis=1).mean()
+
+if avg_system_flow > 0:
+    buffer_minutes = storage_capacity_nm3 / avg_system_flow
+else:
+    buffer_minutes = 0
+
+st.markdown(f"**Effective Storage Capacity:** {storage_capacity_nm3:.2f} Nm³")
+st.markdown(f"**Estimated Buffer Time:** {buffer_minutes:.1f} minutes at average system flow of {avg_system_flow:.2f} m³/min")
+
+    # ----------------------------
+    # Step 5: Effectiveness Simulation
 # ----------------------------
 st.subheader("Step 5: Effectiveness Simulation")
 with st.expander("🔁 Compare with Modified Configuration"):
