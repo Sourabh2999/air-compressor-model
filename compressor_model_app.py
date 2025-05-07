@@ -80,9 +80,7 @@ if uploaded_file:
     st.write("### Preview Data")
     st.dataframe(df.head())
 
-
-
-  # ----------------------------
+# ----------------------------
 # Step 3: Real Compressor Efficiency Summary
 # ----------------------------
 st.subheader("Step 3: Real Compressor Efficiency Summary")
@@ -92,8 +90,9 @@ for i in range(1, 4):
     flow_col = f'Flow{i}'
     temp_col = f'Temp{i}'
     power_col = f'Power{i}'
+    ontime_col = f'ON{i}'
 
-    if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
+    if all(col in df.columns for col in [flow_col, temp_col, power_col]):
         flow_m3s = df[flow_col] / 60
         temp_K = df[temp_col] + 273.15
         Qm = flow_m3s * air_density
@@ -107,12 +106,21 @@ for i in range(1, 4):
             "Avg Power (kW)": f"{df[power_col].mean():.2f}",
             "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
             "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
-            "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
+            "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
+            "Avg Duty Cycle (%)": f"{(df[ontime_col].mean() / 300 * 100):.2f}" if ontime_col in df.columns else "N/A"
         })
 
 if summaries:
     st.write("### Compressor Efficiency Summary Table")
     st.dataframe(pd.DataFrame(summaries))
+
+    
+
+    
+
+
+
+    
 
 
     # ----------------------------
@@ -242,13 +250,14 @@ with st.expander("🔁 Compare with Modified Configuration"):
             df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
             summaries.append({
-                "Compressor": f"C{i}",
-                "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
-                "Avg Power (kW)": f"{df[power_col].mean():.2f}",
-                "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
-                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
-                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
-            })
+            "Compressor": f"C{i}",
+            "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
+            "Avg Power (kW)": f"{df[power_col].mean():.2f}",
+            "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
+            "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
+            "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
+            "Avg Duty Cycle (%)": f"{(df[f'ON{i}'].mean() / 300 * 100):.2f}" if f"ON{i}" in df.columns else "N/A"
+        })
 
     if summaries:
         st.write("### Compressor Efficiency Summary Table")
