@@ -124,7 +124,7 @@ if uploaded_file:
         st.write("### Compressor Efficiency Summary Table")
         st.dataframe(pd.DataFrame(summaries))
 
-  # ----------------------------
+# ----------------------------
 # Step 5: Effectiveness Evaluation
 # ----------------------------
 st.subheader("Step 5: Effectiveness Simulation")
@@ -239,3 +239,4 @@ with st.expander("🔁 Compare with Modified Configuration"):
         st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
         st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
         st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
+
