@@ -2,7 +2,6 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # ----------------------------
 # Step 1: Define System Boundaries and Components
@@ -80,39 +79,16 @@ if uploaded_file:
         "Timestamp": "Timestamp"
     }
     df.rename(columns=rename_map, inplace=True)
+    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
 
     st.write("### File Preview")
     st.dataframe(df.head())
 
-    st.write("### Time Series: Flow and Power")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    if 'System_Flow_m3_min' in df.columns:
-        ax.plot(df['Timestamp'], df['System_Flow_m3_min'], label='System Flow')
-    for i in range(1, 4):
-        if f'Flow{i}' in df.columns:
-            ax.plot(df['Timestamp'], df[f'Flow{i}'], label=f'Flow C{i}')
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Flow (m³/min)")
-    ax.set_title("Flow per Compressor vs System")
-    ax.legend()
-    st.pyplot(fig)
-
-    fig, ax2 = plt.subplots(figsize=(12, 6))
-    if 'System_Power_kW' in df.columns:
-        ax2.plot(df['Timestamp'], df['System_Power_kW'], label='System Power')
-    for i in range(1, 4):
-        if f'Power{i}' in df.columns:
-            ax2.plot(df['Timestamp'], df[f'Power{i}'], label=f'Power C{i}')
-    ax2.set_xlabel("Time")
-    ax2.set_ylabel("Power (kW")
-    ax2.set_title("Power per Compressor vs System")
-    ax2.legend()
-    st.pyplot(fig)
-
     # ----------------------------
     # Step 3: Real Efficiency Calculation
     # ----------------------------
-    st.subheader("Step 3: Real Compressor Efficiency")
+    st.subheader("Step 3: Real Compressor Efficiency Summary")
+    summaries = []
     for i in range(1, 4):
         flow_col = f'Flow{i}'
         temp_col = f'Temp{i}'
@@ -126,5 +102,15 @@ if uploaded_file:
             df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
             df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
-            st.write(f"#### Compressor {i} Efficiency")
-            st.line_chart(df[["Timestamp", f"Efficiency_{i}"].copy()].set_index("Timestamp"))
+            summaries.append({
+                "Compressor": f"C{i}",
+                "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
+                "Avg Power (kW)": f"{df[power_col].mean():.2f}",
+                "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
+                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
+                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
+            })
+
+    if summaries:
+        st.write("### Compressor Efficiency Summary Table")
+        st.dataframe(pd.DataFrame(summaries))
