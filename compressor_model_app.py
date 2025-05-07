@@ -69,4 +69,56 @@ for i in range(3):
 st.subheader("Step 1: Ideal Compressor Work Calculation")
 st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
 
-# ... rest of the unchanged code follows ...
+# ----------------------------
+# Step 2: Upload Historical Compressor Data
+# ----------------------------
+st.subheader("Step 2: Upload Historical Compressor Data")
+uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
+
+if uploaded_file:
+    if uploaded_file.name.endswith(".xlsx"):
+        df = pd.read_excel(uploaded_file)
+    else:
+        df = pd.read_csv(uploaded_file)
+
+    df.rename(columns=lambda x: x.strip(), inplace=True)
+    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
+    st.write("### File Preview")
+    st.dataframe(df.head())
+
+    # ----------------------------
+    # Step 3: Efficiency and Effectiveness Analysis
+    # ----------------------------
+    st.subheader("Step 3: Effectiveness and Tank Impact Analysis")
+
+    mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar)
+    mod_aftercooler_drop = st.number_input("Modified Aftercooler Drop (bar)", value=aftercooler_drop)
+    mod_dryer_drop = st.number_input("Modified Dryer Drop (bar)", value=dryer_drop)
+    mod_filter_drop = st.number_input("Modified Filter Drop (bar)", value=filter_drop)
+
+    mod_total_drop = (mod_aftercooler_drop + mod_dryer_drop + mod_filter_drop) * 100000
+    mod_set_pressure = mod_set_pressure_bar * 100000 + mod_total_drop
+
+    base_tank_energy_kWh = calculate_tank_energy(ambient_pressure, adjusted_set_pressure, receiver_tank_m3) / 3600
+    mod_tank_energy_kWh = calculate_tank_energy(ambient_pressure, mod_set_pressure, receiver_tank_m3) / 3600
+
+    st.write(f"**Receiver Tank Energy - Base:** {base_tank_energy_kWh:.2f} kWh")
+    st.write(f"**Receiver Tank Energy - Modified:** {mod_tank_energy_kWh:.2f} kWh")
+
+    st.write("\n")
+    st.markdown("**Effectiveness (%):**")
+    if base_tank_energy_kWh > 0:
+        effectiveness = (base_tank_energy_kWh - mod_tank_energy_kWh) / base_tank_energy_kWh * 100
+    else:
+        effectiveness = 0.0
+
+    st.metric(label="Effectiveness from Tank Adjustment", value=f"{effectiveness:.2f}%")
+
+    st.subheader("Step 4: Carbon Impact")
+    co2_factor = 0.341 / 1000
+    tco2e_base = base_tank_energy_kWh * co2_factor
+    tco2e_mod = mod_tank_energy_kWh * co2_factor
+
+    st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
+    st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
+    st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
