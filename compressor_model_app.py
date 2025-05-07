@@ -149,16 +149,16 @@ with st.expander("🔁 Compare with Modified Configuration"):
     count = 0
 
     for i in range(1, 4):
-        flow_col = f'Flow{i}'
-        temp_col = f'Temp{i}'
-        power_col = f'Power{i}'
+        flow_col = f"Flow{i}"
+        temp_col = f"Temp{i}"
+        power_col = f"Power{i}"
 
         if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
 
-            base_ideal_power = df[f'Ideal_Power_{i}_kW']
+            base_ideal_power = df[f"Ideal_Power_{i}_kW"]
             mod_ideal_power = calculate_ideal_work(ambient_pressure, mod_set_pressure, temp_K, Qm) / 1000
 
             ε = (base_ideal_power - mod_ideal_power) / base_ideal_power
@@ -239,4 +239,3 @@ with st.expander("🔁 Compare with Modified Configuration"):
         st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
         st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
         st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
-
