@@ -13,6 +13,7 @@ def calculate_ideal_work(p1, p2, T, Q):
 
 # ----------------------------
 # Step 1: System Parameters
+# ----------------------------
 st.subheader("Step 1: Compressor System Parameters")
 with st.expander("⚙️ System Configuration"):
     flow_rates = []
@@ -23,17 +24,17 @@ with st.expander("⚙️ System Configuration"):
         flow_rates.append(flow)
         powers.append(power)
 
-    motor_eff = st.slider("Motor Efficiency (%)", 80, 100, 95)
+    motor_eff = st.slider("Motor Efficiency (%)", 80, 100, 95, key="motor_eff")
 
-    set_pressure_bar = st.number_input("Set Pressure (bar)", value=7.0)
-    aftercooler_drop = st.number_input("Aftercooler Pressure Drop (bar)", value=0.2)
-    dryer_drop = st.number_input("Dryer Pressure Drop (bar)", value=0.2)
-    filter_drop = st.number_input("Filter Pressure Drop (bar)", value=0.1)
-    receiver_volume = st.number_input("Receiver Tank Volume (liters)", value=500.0)
+    set_pressure_bar = st.number_input("Set Pressure (bar)", value=7.0, key="set_pressure")
+    aftercooler_drop = st.number_input("Aftercooler Pressure Drop (bar)", value=0.2, key="aftercooler")
+    dryer_drop = st.number_input("Dryer Pressure Drop (bar)", value=0.2, key="dryer")
+    filter_drop = st.number_input("Filter Pressure Drop (bar)", value=0.1, key="filter")
+    receiver_volume = st.number_input("Receiver Tank Volume (liters)", value=500.0, key="receiver")
 
-    ambient_temp_c = st.number_input("Ambient Temperature (°C)", min_value=-40.0, value=20.0)
+    ambient_temp_c = st.number_input("Ambient Temperature (°C)", min_value=-40.0, value=20.0, key="temp")
     ambient_temp = ambient_temp_c + 273.15
-    ambient_pressure_bar = st.number_input("Ambient Pressure (bar)", min_value=0.5, value=1.013)
+    ambient_pressure_bar = st.number_input("Ambient Pressure (bar)", min_value=0.5, value=1.013, key="amb_press")
     ambient_pressure = ambient_pressure_bar * 100000
 
     R = 287
@@ -53,15 +54,6 @@ with st.expander("⚙️ System Configuration"):
     st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
 
 # ----------------------------
-st.subheader("Step 1: Compressor System Parameters")
-with st.expander("⚙️ System Configuration"):
-    set_pressure_bar = st.number_input("Set Pressure (bar)", value=7.0)
-    aftercooler_drop = st.number_input("Aftercooler Pressure Drop (bar)", value=0.2)
-    dryer_drop = st.number_input("Dryer Pressure Drop (bar)", value=0.2)
-    filter_drop = st.number_input("Filter Pressure Drop (bar)", value=0.1)
-    receiver_volume = st.number_input("Receiver Tank Volume (liters)", value=500.0)
-
-# ----------------------------
 # Step 2: Upload and Preview Data
 # ----------------------------
 st.subheader("Step 2: Upload Compressor Data")
@@ -76,45 +68,46 @@ if uploaded_file:
     st.dataframe(df.head())
 
     # ----------------------------
-    # Step 3: Calculate Ideal Power
+    # Step 3: Real Efficiency Calculation
     # ----------------------------
-    st.subheader("Step 3: Calculate Ideal Power")
-    total_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000
-    set_pressure = set_pressure_bar * 100000 + total_drop
-
+    st.subheader("Step 3: Real Compressor Efficiency Summary")
+    summaries = []
     for i in range(1, 4):
-        flow_col = f"Flow{i}"
-        temp_col = f"Temp{i}"
+        flow_col = f'Flow{i}'
+        temp_col = f'Temp{i}'
+        power_col = f'Power{i}'
 
-        if flow_col in df.columns and temp_col in df.columns:
+        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
+            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm) / 1000
+            df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
+            df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
-            df[f"Ideal_Power_{i}_kW"] = calculate_ideal_work(ambient_pressure, set_pressure, temp_K, Qm) / 1000
+            summaries.append({
+                "Compressor": f"C{i}",
+                "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
+                "Avg Power (kW)": f"{df[power_col].mean():.2f}",
+                "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
+                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
+                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
+            })
 
-    st.success("Ideal power calculations added to dataframe.")
-    st.dataframe(df[[col for col in df.columns if "Ideal_Power" in col]].head())
+    if summaries:
+        st.write("### Compressor Efficiency Summary Table")
+        st.dataframe(pd.DataFrame(summaries))
 
     # ----------------------------
-    # Step 4: Optional Losses Summary
-    # ----------------------------
-    st.subheader("Step 4: Optional Pressure Drop Losses Summary")
-    st.markdown(f"**Aftercooler Loss:** {aftercooler_drop} bar")
-    st.markdown(f"**Dryer Loss:** {dryer_drop} bar")
-    st.markdown(f"**Filter Loss:** {filter_drop} bar")
-    st.markdown(f"**Receiver Tank Volume:** {receiver_volume} liters")
-
-    # ----------------------------
-    # Step 5: Effectiveness Simulation using ON/OFF and Receiver Tank
+    # Step 5: Effectiveness Evaluation
     # ----------------------------
     st.subheader("Step 5: Effectiveness Simulation")
     with st.expander("🔁 Compare with Modified Configuration"):
-        mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar)
-        mod_aftercooler_drop = st.number_input("Modified Aftercooler Drop (bar)", value=aftercooler_drop)
-        mod_dryer_drop = st.number_input("Modified Dryer Drop (bar)", value=dryer_drop)
-        mod_filter_drop = st.number_input("Modified Filter Drop (bar)", value=filter_drop)
-        mod_receiver_volume = st.number_input("Modified Receiver Tank Volume (liters)", value=receiver_volume)
+        mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar, key="mod_setp")
+        mod_aftercooler_drop = st.number_input("Modified Aftercooler Drop (bar)", value=aftercooler_drop, key="mod_ac")
+        mod_dryer_drop = st.number_input("Modified Dryer Drop (bar)", value=dryer_drop, key="mod_dryer")
+        mod_filter_drop = st.number_input("Modified Filter Drop (bar)", value=filter_drop, key="mod_filter")
+        mod_receiver_volume = st.number_input("Modified Receiver Tank Volume (liters)", value=receiver_volume, key="mod_recv")
 
         mod_total_drop = (mod_aftercooler_drop + mod_dryer_drop + mod_filter_drop) * 100000
         mod_set_pressure = mod_set_pressure_bar * 100000 + mod_total_drop
