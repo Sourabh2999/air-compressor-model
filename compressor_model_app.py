@@ -32,6 +32,15 @@ ambient_pressure = ambient_pressure_bar * 100000
 set_pressure_bar = st.sidebar.number_input("Compressor Set Pressure (bar)", min_value=1.0, value=7.0)
 set_pressure = set_pressure_bar * 100000
 
+# Pressure Drops
+st.sidebar.subheader("Optional Pressure Drops")
+aftercooler_drop = st.sidebar.number_input("Aftercooler Pressure Drop (bar)", min_value=0.0, value=0.1)
+dryer_drop = st.sidebar.number_input("Dryer Pressure Drop (bar)", min_value=0.0, value=0.2)
+filter_drop = st.sidebar.number_input("Filter Pressure Drop (bar)", min_value=0.0, value=0.1)
+
+total_pressure_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000  # bar to Pa
+adjusted_set_pressure = set_pressure + total_pressure_drop
+
 # Constants
 R = 287
 k = 1.4
@@ -46,11 +55,11 @@ total_ideal_work = 0
 for i in range(3):
     flow_rate = flow_rates[i] / 60
     Qm = flow_rate * air_density
-    work = calculate_ideal_work(ambient_pressure, set_pressure, ambient_temp, Qm)
+    work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm)
     total_ideal_work += work
 
 st.subheader("Step 1: Ideal Compressor Work Calculation")
-st.markdown(f"**Total Ideal Compressor Work (3 Compressors):** {total_ideal_work/1000:.2f} kW")
+st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
 
 # ----------------------------
 # Step 2: Upload Historical Compressor Data
@@ -98,7 +107,7 @@ if uploaded_file:
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
-            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, set_pressure, temp_K, Qm) / 1000
+            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm) / 1000
             df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
             df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
