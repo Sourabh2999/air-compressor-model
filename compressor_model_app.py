@@ -14,8 +14,8 @@ st.sidebar.header("System Parameters")
 
 # Basic Compressor Specs
 st.sidebar.subheader("Compressor Specifications")
-cfm = st.sidebar.number_input("Rated Flow (CFM)", min_value=10.0, value=500.0)
-hp = st.sidebar.number_input("Rated Power (HP)", min_value=5.0, value=200.0)
+flow_rate_m3_min = st.sidebar.number_input("Rated Flow (m3/min)", min_value=1.0, value=15.0)
+power_kw = st.sidebar.number_input("Rated Power (kW)", min_value=1.0, value=150.0)
 motor_eff = st.sidebar.slider("Motor Efficiency (%)", 80, 100, 95)
 
 # Operating Conditions
@@ -26,7 +26,6 @@ ambient_pressure_bar = st.sidebar.number_input("Ambient Pressure (bar)", min_val
 ambient_pressure = ambient_pressure_bar * 100000  # Convert to Pascals
 set_pressure_bar = st.sidebar.number_input("Compressor Set Pressure (bar)", min_value=1.0, value=7.0)
 set_pressure = set_pressure_bar * 100000  # Convert to Pascals
-flow_rate_m3_min = st.sidebar.number_input("Operating Flow Rate (m3/min)", min_value=1.0, value=15.0)
 flow_rate = flow_rate_m3_min / 60  # convert to m3/s
 
 # Constants
