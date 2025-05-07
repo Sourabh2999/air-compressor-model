@@ -13,6 +13,45 @@ def calculate_ideal_work(p1, p2, T, Q):
 
 # ----------------------------
 # Step 1: System Parameters
+st.subheader("Step 1: Compressor System Parameters")
+with st.expander("⚙️ System Configuration"):
+    flow_rates = []
+    powers = []
+    for i in range(1, 4):
+        flow = st.number_input(f"Rated Flow Compressor {i} (m3/min)", min_value=0.0, value=15.0, key=f"flow{i}")
+        power = st.number_input(f"Rated Power Compressor {i} (kW)", min_value=0.0, value=150.0, key=f"power{i}")
+        flow_rates.append(flow)
+        powers.append(power)
+
+    motor_eff = st.slider("Motor Efficiency (%)", 80, 100, 95)
+
+    set_pressure_bar = st.number_input("Set Pressure (bar)", value=7.0)
+    aftercooler_drop = st.number_input("Aftercooler Pressure Drop (bar)", value=0.2)
+    dryer_drop = st.number_input("Dryer Pressure Drop (bar)", value=0.2)
+    filter_drop = st.number_input("Filter Pressure Drop (bar)", value=0.1)
+    receiver_volume = st.number_input("Receiver Tank Volume (liters)", value=500.0)
+
+    ambient_temp_c = st.number_input("Ambient Temperature (°C)", min_value=-40.0, value=20.0)
+    ambient_temp = ambient_temp_c + 273.15
+    ambient_pressure_bar = st.number_input("Ambient Pressure (bar)", min_value=0.5, value=1.013)
+    ambient_pressure = ambient_pressure_bar * 100000
+
+    R = 287
+    k = 1.4
+    air_density = 1.225
+
+    total_pressure_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000
+    adjusted_set_pressure = set_pressure_bar * 100000 + total_pressure_drop
+
+    total_ideal_work = 0
+    for i in range(3):
+        flow_rate = flow_rates[i] / 60
+        Qm = flow_rate * air_density
+        work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm)
+        total_ideal_work += work
+
+    st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
+
 # ----------------------------
 st.subheader("Step 1: Compressor System Parameters")
 with st.expander("⚙️ System Configuration"):
