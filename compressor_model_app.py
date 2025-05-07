@@ -1,128 +1,58 @@
-# compressor_model_app.py
-import streamlit as st
-import numpy as np
-import pandas as pd
+# ----------------------------
+# Step 1: System Parameters
+# ----------------------------
+st.subheader("Step 1: Compressor System Parameters")
+with st.expander("⚙️ System Configuration"):
+    set_pressure_bar = st.number_input("Set Pressure (bar)", value=7.0)
+    aftercooler_drop = st.number_input("Aftercooler Pressure Drop (bar)", value=0.2)
+    dryer_drop = st.number_input("Dryer Pressure Drop (bar)", value=0.2)
+    filter_drop = st.number_input("Filter Pressure Drop (bar)", value=0.1)
+    receiver_volume = st.number_input("Receiver Tank Volume (liters)", value=500.0)
 
 # ----------------------------
-# Step 1: Define System Boundaries and Components
+# Step 2: Upload and Preview Data
 # ----------------------------
-st.set_page_config(page_title="Air Compressor Energy Model", layout="wide")
-st.title("Industrial Air Compressor System Energy Modeling")
-
-st.sidebar.header("System Parameters")
-
-# Basic Compressor Specs
-st.sidebar.subheader("Compressor Specifications")
-flow_rates = []
-powers = []
-for i in range(1, 4):
-    flow = st.sidebar.number_input(f"Rated Flow Compressor {i} (m3/min)", min_value=0.0, value=15.0, key=f"flow{i}")
-    power = st.sidebar.number_input(f"Rated Power Compressor {i} (kW)", min_value=0.0, value=150.0, key=f"power{i}")
-    flow_rates.append(flow)
-    powers.append(power)
-
-motor_eff = st.sidebar.slider("Motor Efficiency (%)", 80, 100, 95)
-
-# Operating Conditions
-st.sidebar.subheader("Operating Conditions")
-ambient_temp_c = st.sidebar.number_input("Ambient Temperature (°C)", min_value=-40.0, value=20.0)
-ambient_temp = ambient_temp_c + 273.15
-ambient_pressure_bar = st.sidebar.number_input("Ambient Pressure (bar)", min_value=0.5, value=1.013)
-ambient_pressure = ambient_pressure_bar * 100000
-set_pressure_bar = st.sidebar.number_input("Compressor Set Pressure (bar)", min_value=1.0, value=7.0)
-set_pressure = set_pressure_bar * 100000
-
-# Pressure Drops
-st.sidebar.subheader("Optional Pressure Drops")
-aftercooler_drop = st.sidebar.number_input("Aftercooler Pressure Drop (bar)", min_value=0.0, value=0.1)
-dryer_drop = st.sidebar.number_input("Dryer Pressure Drop (bar)", min_value=0.0, value=0.2)
-filter_drop = st.sidebar.number_input("Filter Pressure Drop (bar)", min_value=0.0, value=0.1)
-
-total_pressure_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000  # bar to Pa
-adjusted_set_pressure = set_pressure + total_pressure_drop
-
-# Constants
-R = 287
-k = 1.4
-air_density = 1.225
-
-def calculate_ideal_work(Pa, P2, Ta, Qm):
-    term = (P2 / Pa)**((k - 1) / k) - 1
-    return (k / (k - 1)) * Qm * R * Ta * term
-
-# Step 1 Output
-total_ideal_work = 0
-for i in range(3):
-    flow_rate = flow_rates[i] / 60
-    Qm = flow_rate * air_density
-    work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm)
-    total_ideal_work += work
-
-st.subheader("Step 1: Ideal Compressor Work Calculation")
-st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
-
-# ----------------------------
-# Step 2: Upload Historical Compressor Data
-# ----------------------------
-st.subheader("Step 2: Upload Historical Compressor Data")
-uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
-
+st.subheader("Step 2: Upload Compressor Data")
+uploaded_file = st.file_uploader("Upload Excel or CSV file with compressor data", type=["csv", "xlsx"])
 if uploaded_file:
-    if uploaded_file.name.endswith(".xlsx"):
-        df = pd.read_excel(uploaded_file)
-    else:
+    if uploaded_file.name.endswith(".csv"):
         df = pd.read_csv(uploaded_file)
+    else:
+        df = pd.read_excel(uploaded_file)
 
-    rename_map = {
-        "C1 - electrical power consumption": "Power1",
-        "C1 - delivery volume flow rate": "Flow1",
-        "C1 - intake temperature": "Temp1",
-        "C2 - electrical power consumption": "Power2",
-        "C2 - delivery volume flow rate": "Flow2",
-        "C2 - intake temperature": "Temp2",
-        "C3 - electrical power consumption": "Power3",
-        "C3 - delivery volume flow rate": "Flow3",
-        "C3 - intake temperature": "Temp3",
-        "CO1 - electrical power consumption": "System_Power_kW",
-        "CO1 - delivery volume flow rate": "System_Flow_m3_min",
-        "Timestamp": "Timestamp"
-    }
-    df.rename(columns=rename_map, inplace=True)
-    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
-
-    st.write("### File Preview")
+    st.write("### Preview Data")
     st.dataframe(df.head())
 
-    # ----------------------------
-    # Step 3: Real Efficiency Calculation
-    # ----------------------------
-    st.subheader("Step 3: Real Compressor Efficiency Summary")
-    summaries = []
-    for i in range(1, 4):
-        flow_col = f'Flow{i}'
-        temp_col = f'Temp{i}'
-        power_col = f'Power{i}'
+# ----------------------------
+# Step 3: Calculate Ideal Power
+# ----------------------------
+st.subheader("Step 3: Calculate Ideal Power")
+if uploaded_file:
+    total_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000
+    set_pressure = set_pressure_bar * 100000 + total_drop
 
-        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
+    for i in range(1, 4):
+        flow_col = f"Flow{i}"
+        temp_col = f"Temp{i}"
+
+        if flow_col in df.columns and temp_col in df.columns:
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
-            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm) / 1000
-            df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
-            df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
-            summaries.append({
-                "Compressor": f"C{i}",
-                "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
-                "Avg Power (kW)": f"{df[power_col].mean():.2f}",
-                "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
-                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
-                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
-            })
+            df[f"Ideal_Power_{i}_kW"] = calculate_ideal_work(ambient_pressure, set_pressure, temp_K, Qm) / 1000
 
-    if summaries:
-        st.write("### Compressor Efficiency Summary Table")
-        st.dataframe(pd.DataFrame(summaries))
+    st.success("Ideal power calculations added to dataframe.")
+    st.dataframe(df[[col for col in df.columns if "Ideal_Power" in col]].head())
+
+# ----------------------------
+# Step 4: Optional Losses Summary
+# ----------------------------
+st.subheader("Step 4: Optional Pressure Drop Losses Summary")
+st.markdown(f"**Aftercooler Loss:** {aftercooler_drop} bar")
+st.markdown(f"**Dryer Loss:** {dryer_drop} bar")
+st.markdown(f"**Filter Loss:** {filter_drop} bar")
+st.markdown(f"**Receiver Tank Volume:** {receiver_volume} liters")
 
 # ----------------------------
 # Step 5: Effectiveness Evaluation
@@ -133,6 +63,7 @@ with st.expander("🔁 Compare with Modified Configuration"):
     mod_aftercooler_drop = st.number_input("Modified Aftercooler Drop (bar)", value=aftercooler_drop)
     mod_dryer_drop = st.number_input("Modified Dryer Drop (bar)", value=dryer_drop)
     mod_filter_drop = st.number_input("Modified Filter Drop (bar)", value=filter_drop)
+    mod_receiver_volume = st.number_input("Modified Receiver Tank Volume (liters)", value=receiver_volume)
 
     mod_total_drop = (mod_aftercooler_drop + mod_dryer_drop + mod_filter_drop) * 100000
     mod_set_pressure = mod_set_pressure_bar * 100000 + mod_total_drop
@@ -152,8 +83,9 @@ with st.expander("🔁 Compare with Modified Configuration"):
         flow_col = f"Flow{i}"
         temp_col = f"Temp{i}"
         power_col = f"Power{i}"
+        ontime_col = f"C{i} ON Time"
 
-        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
+        if all(col in df.columns for col in [flow_col, temp_col, power_col, ontime_col]):
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
@@ -164,17 +96,17 @@ with st.expander("🔁 Compare with Modified Configuration"):
             ε = (base_ideal_power - mod_ideal_power) / base_ideal_power
             ε = ε.clip(lower=0, upper=1)
 
+            duty_cycle = df[ontime_col] / 300.0  # 5-minute window
             interval_hours = 5 / 60
-            energy_base = (base_ideal_power * interval_hours).sum()
-            energy_mod = (mod_ideal_power * interval_hours).sum()
+
+            energy_base = (base_ideal_power * duty_cycle * interval_hours).sum()
+            energy_mod = (mod_ideal_power * duty_cycle * interval_hours).sum()
             cost_base = energy_base * 0.12
             cost_mod = energy_mod * 0.12
 
             actual_power = df[power_col]
-            base_efficiency = base_ideal_power / actual_power
-            mod_efficiency = mod_ideal_power / actual_power
-            base_efficiency = base_efficiency.clip(upper=1.5)
-            mod_efficiency = mod_efficiency.clip(upper=1.5)
+            base_efficiency = (base_ideal_power / actual_power).clip(upper=1.5)
+            mod_efficiency = (mod_ideal_power / actual_power).clip(upper=1.5)
 
             effectiveness_rows.append({
                 "Compressor": f"C{i}",
@@ -218,7 +150,7 @@ with st.expander("🔁 Compare with Modified Configuration"):
         st.dataframe(df_summary)
 
         st.write("### 🌍 Carbon Emissions (TCO₂e)")
-        co2_factor = 0.341 / 1000  # 0.341 TCO2e per MWh = 0.000341 per kWh
+        co2_factor = 0.341 / 1000
         tco2e_base = total_energy_base * co2_factor
         tco2e_mod = total_energy_mod * co2_factor
 
