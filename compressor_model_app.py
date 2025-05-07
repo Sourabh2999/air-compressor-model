@@ -81,7 +81,19 @@ if uploaded_file:
     else:
         df = pd.read_csv(uploaded_file)
 
+    rename_map = {
+        "C1 - delivery volume flow rate": "Flow1",
+        "C1 - intake temperature": "Temp1",
+        "C1 - electrical power consumption": "Power1",
+        "C2 - delivery volume flow rate": "Flow2",
+        "C2 - intake temperature": "Temp2",
+        "C2 - electrical power consumption": "Power2",
+        "C3 - delivery volume flow rate": "Flow3",
+        "C3 - intake temperature": "Temp3",
+        "C3 - electrical power consumption": "Power3"
+    }
     df.rename(columns=lambda x: x.strip(), inplace=True)
+    df.rename(columns=rename_map, inplace=True)
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
     st.write("### File Preview")
     st.dataframe(df.head())
