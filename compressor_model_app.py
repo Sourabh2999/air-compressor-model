@@ -217,6 +217,20 @@ with st.expander("🔁 Compare with Modified Configuration"):
         df_summary = pd.DataFrame(effectiveness_rows)
         st.dataframe(df_summary)
 
+        st.write("### 📊 Cost and Energy Comparison")
+        chart_data = df_summary[df_summary['Compressor'] == "System Total"][[
+            "Energy Base (kWh)", "Energy Mod (kWh)", "Cost Base (€/yr)", "Cost Mod (€/yr)"
+        ]].T
+        chart_data.columns = ["Value"]
+        st.bar_chart(chart_data)
+
+        st.write("### 📊 Efficiency Comparison")
+        efficiency_chart = df_summary[df_summary['Compressor'] == "System Total"][[
+            "Base Efficiency (%)", "Mod Efficiency (%)"
+        ]].T
+        efficiency_chart.columns = ["Efficiency"]
+        st.bar_chart(efficiency_chart)
+
         st.write("### 🌍 Carbon Emissions (TCO₂e)")
         co2_factor = 0.341 / 1000  # 0.341 TCO2e per MWh = 0.000341 per kWh
         tco2e_base = total_energy_base * co2_factor
