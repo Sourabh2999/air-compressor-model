@@ -7,12 +7,12 @@ import pandas as pd
 # Step 1: Define System Boundaries and Components
 # ----------------------------
 st.set_page_config(page_title="Air Compressor Energy Model", layout="wide")
-st.title("Industrial Air Compressor System Energy Modeling")
+st.title("Compressed Air Infrastructure Optimization for Logistics centres")
 
 st.sidebar.header("System Parameters")
 
 # Basic Compressor Specs
-st.sidebar.subheader("Compressor Specifications")
+st.sidebar.subheader("Installed Compressor Infrastructure Specifications")
 flow_rates = []
 powers = []
 for i in range(1, 4):
@@ -118,8 +118,8 @@ if uploaded_file:
 
             summaries.append({
                 "Compressor": f"C{i}",
-                "Avg Flow (m³/min)": f"{df[flow_col].mean():.2f}",
-                "Avg Power (kW)": f"{df[power_col].mean():.2f}",
+                "Avg Air Generated (m³/min)": f"{df[flow_col].mean():.2f}",
+                "Avg Power Consumed (kW)": f"{df[power_col].mean():.2f}",
                 "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
                 "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
                 "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
@@ -185,14 +185,14 @@ if uploaded_file:
                 effectiveness_rows.append({
                     "Compressor": f"C{i}",
                     "Effectiveness (%)": f"{effectiveness * 100:.2f}",
-                    "Energy Base (kWh)": f"{energy_base:.2f}",
-                    "Energy Mod (kWh)": f"{energy_mod:.2f}",
-                    "Tank Energy Base (kWh)": f"{base_tank_energy_kWh:.2f}",
-                    "Tank Energy Mod (kWh)": f"{mod_tank_energy_kWh:.2f}",
-                    "Cost Base (€/yr)": f"{cost_base:.2f}",
-                    "Cost Mod (€/yr)": f"{cost_mod:.2f}",
-                    "Base Efficiency (%)": f"{(base_efficiency.mean() * 100):.2f}",
-                    "Mod Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
+                    "Original Design Energy (kWh)": f"{energy_base:.2f}",
+                    "Modified Design Energy (kWh)": f"{energy_mod:.2f}",
+                    "Original Design Tank Energy (kWh)": f"{base_tank_energy_kWh:.2f}",
+                    "Modified Design Tank Energy (kWh)": f"{mod_tank_energy_kWh:.2f}",
+                    "Original Design Cost (€/yr)": f"{cost_base:.2f}",
+                    "Modified Design Cost (€/yr)": f"{cost_mod:.2f}",
+                    "Original Design Efficiency (%)": f"{(base_efficiency.mean() * 100):.2f}",
+                    "Modified Design Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
                 })
 
                 total_energy_base += energy_base
@@ -207,14 +207,14 @@ if uploaded_file:
             effectiveness_rows.append({
                 "Compressor": "System Total",
                 "Effectiveness (%)": f"{(1 - (total_energy_mod / total_energy_base)) * 100:.2f}",
-                "Energy Base (kWh)": f"{total_energy_base:.2f}",
-                "Energy Mod (kWh)": f"{total_energy_mod:.2f}",
-                "Tank Energy Base (kWh)": f"{base_tank_energy_kWh:.2f}",
-                "Tank Energy Mod (kWh)": f"{mod_tank_energy_kWh:.2f}",
-                "Cost Base (€/yr)": f"{total_cost_base:.2f}",
-                "Cost Mod (€/yr)": f"{total_cost_mod:.2f}",
-                "Base Efficiency (%)": f"{(total_base_efficiency / count * 100):.2f}",
-                "Mod Efficiency (%)": f"{(total_mod_efficiency / count * 100):.2f}"
+                "Original Design Energy (kWh)": f"{total_energy_base:.2f}",
+                "Modified Design Energy (kWh)": f"{total_energy_mod:.2f}",
+                "Original Design Tank Energy (kWh)": f"{base_tank_energy_kWh:.2f}",
+                "Modified Design Tank Energy (kWh)": f"{mod_tank_energy_kWh:.2f}",
+                "Original Design Cost (€/yr)": f"{total_cost_base:.2f}",
+                "Modified Design Cost (€/yr)": f"{total_cost_mod:.2f}",
+                "Original Design Efficiency (%)": f"{(total_base_efficiency / count * 100):.2f}",
+                "Modified Design Efficiency (%)": f"{(total_mod_efficiency / count * 100):.2f}"
             })
 
             st.write("### Effectiveness Comparison Table")
@@ -226,6 +226,6 @@ if uploaded_file:
             tco2e_base = total_energy_base * co2_factor
             tco2e_mod = total_energy_mod * co2_factor
 
-            st.markdown(f"**Base Emissions:** {tco2e_base:.2f} TCO₂e/year")
-            st.markdown(f"**Modified Emissions:** {tco2e_mod:.2f} TCO₂e/year")
+            st.markdown(f"**Original Design Emissions:** {tco2e_base:.2f} TCO₂e/year")
+            st.markdown(f"**Modified Design Emissions:** {tco2e_mod:.2f} TCO₂e/year")
             st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
