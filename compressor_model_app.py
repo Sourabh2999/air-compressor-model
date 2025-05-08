@@ -66,13 +66,13 @@ for i in range(3):
     work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm)
     total_ideal_work += work
 
-st.subheader("Step 1: Ideal Compressor Work Calculation")
+st.subheader("Ideal Compressor Work Calculation")
 st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
 
 # ----------------------------
 # Step 2: Upload Historical Compressor Data
 # ----------------------------
-st.subheader("Step 2: Upload Historical Compressor Data")
+st.subheader("Upload Historical Compressor Data")
 uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
 
 if uploaded_file:
@@ -101,7 +101,7 @@ if uploaded_file:
     # ----------------------------
     # Step 3: Real Efficiency Calculation
     # ----------------------------
-    st.subheader("Step 3: Real Compressor Efficiency Summary")
+    st.subheader("Real Compressor Efficiency Summary")
     summaries = []
     for i in range(1, 4):
         flow_col = f'Flow{i}'
@@ -132,7 +132,7 @@ if uploaded_file:
     # ----------------------------
     # Step 4 and Step 5 Updated
     # ----------------------------
-    st.subheader("Step 4 & 5: Effectiveness and Carbon Emission Evaluation")
+    st.subheader("Effectiveness and Carbon Emission Evaluation")
     with st.expander("🔁 Compare with Modified Configuration"):
         mod_receiver_tank_liters = st.number_input("Modified Receiver Tank Volume (liters)", min_value=100.0, value=receiver_tank_liters, step=50.0)
         mod_receiver_tank_m3 = mod_receiver_tank_liters / 1000.0
