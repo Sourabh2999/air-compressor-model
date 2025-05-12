@@ -143,10 +143,7 @@ if uploaded_file:
         st.write("### Compressor Efficiency Summary Table")
         st.dataframe(pd.DataFrame(summaries))
 
-
-    # ----------------------------
-    # Step 4 and Step 5 Updated
-    # ----------------------------
+    # Step 4 header and logic
     st.subheader("Effectiveness and Carbon Emission Evaluation")
     with st.expander("🔁 Compare with Modified Configuration"):
         mod_receiver_tank_liters = st.number_input("Modified Receiver Tank Volume (liters)", min_value=100.0, value=receiver_tank_liters, step=50.0)
@@ -190,8 +187,8 @@ if uploaded_file:
                 cost_mod = energy_mod * 0.12
 
                 actual_power = df[power_col]
-                base_efficiency = base_ideal_power / actual_power
-                mod_efficiency = mod_ideal_power / actual_power
+                base_efficiency = base_ideal_power / actual_power.replace(0, np.nan)
+                mod_efficiency = mod_ideal_power / actual_power.replace(0, np.nan)
                 base_efficiency = base_efficiency.clip(upper=1.5)
                 mod_efficiency = mod_efficiency.clip(upper=1.5)
 
