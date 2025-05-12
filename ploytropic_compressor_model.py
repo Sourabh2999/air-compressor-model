@@ -15,15 +15,25 @@ st.sidebar.header("System Parameters")
 st.sidebar.subheader("Installed Compressor Infrastructure Specifications")
 flow_rates = []
 powers = []
+selected_models = []
+
+# Load available models from CSV
+import pandas as pd
+import os
+if os.path.exists("/mnt/data/Compressors Models_python.csv"):
+    df_models = pd.read_csv("/mnt/data/Compressors Models_python.csv", encoding='ISO-8859-1')
+    df_models.rename(columns={df_models.columns[0]: "Model"}, inplace=True)
+    unique_models = sorted(df_models['Model'].dropna().unique().tolist())
+else:
+    unique_models = []
+
 for i in range(1, 4):
+    model = st.sidebar.selectbox(f"Compressor {i} Model", unique_models, index=0 if unique_models else None, key=f"model{i}")
     flow = st.sidebar.number_input(f"Rated Flow Compressor {i} (m3/min)", min_value=0.0, value=15.0, key=f"flow{i}")
     power = st.sidebar.number_input(f"Rated Power Compressor {i} (kW)", min_value=0.0, value=150.0, key=f"power{i}")
+    selected_models.append(model)
     flow_rates.append(flow)
     powers.append(power)
-
-motor_eff = st.sidebar.slider("Motor Efficiency (%)", 80, 100, 95)
-
-# Operating Conditions
 st.sidebar.subheader("Operating Conditions")
 ambient_temp_c = st.sidebar.number_input("Ambient Temperature (°C)", min_value=-40.0, value=20.0)
 ambient_temp = ambient_temp_c + 273.15
@@ -52,7 +62,21 @@ k = 1.4
 n = 1.3  # Polytropic exponent (assumed value between isothermal and adiabatic)
 air_density = 1.225
 
-def calculate_ideal_work(Pa, P2, Ta, Qm):
+def calculate_ideal_work(Pa, P2, Ta, Qm, flow_rate_m3_min=None, model=None):
+    if model and not df_models.empty:
+        model_data = df_models[df_models['Model'] == model]
+        if not model_data.empty and flow_rate_m3_min is not None:
+            try:
+                # Filter for nearest operating pressure
+                pressure_match = model_data.iloc[(model_data['Operating Pressure (bar)'] - P2/100000).abs().argsort()[:3]]
+                flow_vals = pressure_match['Flow Rate (mÂ³/min)'].astype(float)
+                power_vals = pressure_match['Drive Motor Rated Power (kW)'].astype(float)
+                if len(flow_vals.unique()) > 1:
+                    from scipy.interpolate import interp1d
+                    interpolator = interp1d(flow_vals, power_vals, bounds_error=False, fill_value="extrapolate")
+                    return interpolator(flow_rate_m3_min) * 1000  # kW to W
+            except Exception as e:
+                pass
     term = (P2 / Pa)**((n - 1) / n) - 1
     return (n / (n - 1)) * Qm * R * Ta * term
 
@@ -64,7 +88,7 @@ total_ideal_work = 0
 for i in range(3):
     flow_rate = flow_rates[i] / 60
     Qm = flow_rate * air_density
-    work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm)
+    work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm, flow_rate_m3_min=flow_rates[i], model=selected_models[i])
     total_ideal_work += work
 
 st.subheader("Ideal Compressor Work Calculation")
@@ -122,7 +146,7 @@ if uploaded_file:
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
-            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm) / 1000
+            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm, flow_rate_m3_min=df[flow_col], model=selected_models[i - 1]) / 1000
             actual_power = df[power_col]
             df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / actual_power.replace(0, np.nan)
             df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
