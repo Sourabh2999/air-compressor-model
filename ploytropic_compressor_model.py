@@ -18,13 +18,12 @@ powers = []
 selected_models = []
 
 # Load available models from CSV
-import pandas as pd
-import os
-if os.path.exists("Compressors Models_python.csv"):
+try:
     df_models = pd.read_csv("Compressors Models_python.csv", encoding='ISO-8859-1')
     df_models.rename(columns={df_models.columns[0]: "Model"}, inplace=True)
     unique_models = sorted(df_models['Model'].dropna().unique().tolist())
-else:
+except Exception as e:
+    df_models = pd.DataFrame()
     unique_models = []
 
 for i in range(1, 4):
