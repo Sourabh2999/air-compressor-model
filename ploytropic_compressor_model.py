@@ -59,7 +59,6 @@ def calculate_ideal_work(Pa, P2, Ta, Qm):
 def calculate_tank_energy(Pa, P2, V):
     return (P2 * V / (k - 1)) * ((P2 / Pa)**((k - 1) / k) - 1)
 
-
 # Step 1 Output
 total_ideal_work = 0
 for i in range(3):
@@ -117,8 +116,9 @@ if uploaded_file:
         flow_col = f'Flow{i}'
         temp_col = f'Temp{i}'
         power_col = f'Power{i}'
+        on_col = f'C{i} On Time'
 
-        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
+        if flow_col in df.columns and temp_col in df.columns and power_col in df.columns and on_col in df.columns:
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
@@ -127,18 +127,22 @@ if uploaded_file:
             df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / actual_power.replace(0, np.nan)
             df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
+            duty_cycle = df[on_col].mean() * 100
+
             summaries.append({
                 "Compressor": f"C{i}",
                 "Avg Air Generated (m³/min)": f"{df[flow_col].mean():.2f}",
                 "Avg Power Consumed (kW)": f"{actual_power.mean():.2f}",
                 "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
                 "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
-                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
+                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
+                "Duty Cycle (%)": f"{duty_cycle:.2f}"
             })
 
     if summaries:
         st.write("### Compressor Efficiency Summary Table")
         st.dataframe(pd.DataFrame(summaries))
+
 
     # ----------------------------
     # Step 4 and Step 5 Updated
