@@ -37,7 +37,7 @@ for i in range(1, 4):
     
     selected_models.append(model)
     flow_rates.append(flow)
-    powers.append(power)
+    powers.append(rated_power)
 st.sidebar.subheader("Operating Conditions")
 ambient_temp_c = st.sidebar.number_input("Ambient Temperature (°C)", min_value=-40.0, value=20.0)
 ambient_temp = ambient_temp_c + 273.15
