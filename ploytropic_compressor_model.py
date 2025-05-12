@@ -59,6 +59,7 @@ def calculate_ideal_work(Pa, P2, Ta, Qm):
 def calculate_tank_energy(Pa, P2, V):
     return (P2 * V / (k - 1)) * ((P2 / Pa)**((k - 1) / k) - 1)
 
+
 # Step 1 Output
 total_ideal_work = 0
 for i in range(3):
@@ -69,9 +70,16 @@ for i in range(3):
 
 st.subheader("Ideal Compressor Work Calculation")
 st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
-# ----------------------------
-# Step 2: Upload Historical Compressor Data
-# ----------------------------
+
+# Utility function to apply ON/OFF masking to power readings
+def apply_on_off_mask(df, i):
+    power_col = f"Power{i}"
+    on_col = f"C{i} On Time"
+    if power_col in df.columns and on_col in df.columns:
+        df[power_col] = df[power_col] * df[on_col]
+    return df
+
+# Apply ON/OFF mask after loading data
 st.subheader("Upload Historical Compressor Data")
 uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
 
@@ -95,12 +103,14 @@ if uploaded_file:
     df.rename(columns=lambda x: x.strip(), inplace=True)
     df.rename(columns=rename_map, inplace=True)
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
+
+    for i in range(1, 4):
+        df = apply_on_off_mask(df, i)
+
     st.write("### File Preview")
     st.dataframe(df.head())
 
-    # ----------------------------
     # Step 3: Real Efficiency Calculation
-    # ----------------------------
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
     for i in range(1, 4):
@@ -113,13 +123,14 @@ if uploaded_file:
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
             df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm) / 1000
-            df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / df[power_col]
+            actual_power = df[power_col]
+            df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / actual_power.replace(0, np.nan)
             df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
             summaries.append({
                 "Compressor": f"C{i}",
                 "Avg Air Generated (m³/min)": f"{df[flow_col].mean():.2f}",
-                "Avg Power Consumed (kW)": f"{df[power_col].mean():.2f}",
+                "Avg Power Consumed (kW)": f"{actual_power.mean():.2f}",
                 "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
                 "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
                 "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}"
