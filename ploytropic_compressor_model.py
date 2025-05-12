@@ -20,8 +20,8 @@ selected_models = []
 # Load available models from CSV
 import pandas as pd
 import os
-if os.path.exists("/mnt/data/Compressors Models_python.csv"):
-    df_models = pd.read_csv("/mnt/data/Compressors Models_python.csv", encoding='ISO-8859-1')
+if os.path.exists("Compressors Models_python.csv"):
+    df_models = pd.read_csv("Compressors Models_python.csv", encoding='ISO-8859-1')
     df_models.rename(columns={df_models.columns[0]: "Model"}, inplace=True)
     unique_models = sorted(df_models['Model'].dropna().unique().tolist())
 else:
