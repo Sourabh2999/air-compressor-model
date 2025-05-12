@@ -34,8 +34,7 @@ for i in range(1, 4):
     pressure_match = model_data.iloc[(model_data['Flow Rate (mÂ³/min)'].astype(float) - flow).abs().argsort()[:1]]
     rated_power = pressure_match['Drive Motor Rated Power (kW)'].values[0] if not pressure_match.empty else 0.0
     st.sidebar.markdown(f"**Rated Power Compressor {i}:** {rated_power:.2f} kW")
-    flow = st.sidebar.number_input(f"Rated Flow Compressor {i} (m3/min)", min_value=0.0, value=15.0, key=f"flow{i}")
-    power = st.sidebar.number_input(f"Rated Power Compressor {i} (kW)", min_value=0.0, value=150.0, key=f"power{i}")
+    
     selected_models.append(model)
     flow_rates.append(flow)
     powers.append(power)
