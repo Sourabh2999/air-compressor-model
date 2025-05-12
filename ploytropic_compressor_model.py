@@ -52,19 +52,6 @@ k = 1.4
 n = 1.3  # Polytropic exponent (assumed value between isothermal and adiabatic)
 air_density = 1.225
 
-# Piecewise realistic part-load power correction function
-def part_load_correction(plr):
-    if plr >= 0.9:
-        return 1.0
-    elif plr >= 0.7:
-        return 1.05
-    elif plr >= 0.5:
-        return 1.12
-    elif plr >= 0.3:
-        return 1.2
-    else:
-        return 1.3
-
 def calculate_ideal_work(Pa, P2, Ta, Qm):
     term = (P2 / Pa)**((n - 1) / n) - 1
     return (n / (n - 1)) * Qm * R * Ta * term
@@ -82,7 +69,6 @@ for i in range(3):
 
 st.subheader("Ideal Compressor Work Calculation")
 st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
-
 # ----------------------------
 # Step 2: Upload Historical Compressor Data
 # ----------------------------
