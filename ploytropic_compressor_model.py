@@ -145,7 +145,7 @@ if uploaded_file:
             T1 = comp_df[intake_temp_col]
             T2 = comp_df[discharge_temp_col]
 
-            V1_by_V2 = (T2 * P1) / (T1 * P2)
+            V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
             df.loc[comp_df.index, f'n_{i}'] = n_vals
 
