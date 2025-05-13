@@ -115,7 +115,7 @@ if uploaded_file:
     st.write("### File Preview")
     st.dataframe(df.head())
 
-    st.subheader("\ud83d\udcd0 Polytropic Exponent (n) Calculation from Data")
+    st.subheader("Polytropic Exponent (n) Calculation from Data")
     for i in range(1, 4):
         on_col = f"C{i} On Time"
         power_col = f"Power{i}"
