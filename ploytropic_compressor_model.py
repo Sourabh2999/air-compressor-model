@@ -76,37 +76,28 @@ def calculate_ideal_work(Pa, P2, Ta, Qm, flow_rate_m3_min=None, model=None, n=n_
 def calculate_tank_energy(Pa, P2, V):
     return (P2 * V / (k - 1)) * ((P2 / Pa)**((k - 1) / k) - 1)
 
-st.subheader("Ideal Compressor Work Calculation")
-total_ideal_work = 0
-for i in range(3):
-    flow_rate = flow_rates[i] / 60
-    Qm = flow_rate * air_density
-    work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm, flow_rate_m3_min=flow_rates[i], model=selected_models[i])
-    total_ideal_work += work
-
-st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
-
 st.subheader("Upload Historical Compressor Data")
 uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file) if uploaded_file.name.endswith(".xlsx") else pd.read_csv(uploaded_file)
     df.rename(columns=lambda x: x.strip(), inplace=True)
+
     rename_map = {
-        "C1 - delivery volume flow rate": "Flow1",
+        "C1 - delivery volume flow rate": "C1 - delivery volume flow rate",
+        "C2 - delivery volume flow rate": "C2 - delivery volume flow rate",
+        "C3 - delivery volume flow rate": "C3 - delivery volume flow rate",
         "C1 - intake temperature": "Temp1",
-        "C1 - airend discharge temperature": "T2_1",
-        "C1 - local net pressure": "P2_1",
-        "C1 - electrical power consumption": "Power1",
-        "C2 - delivery volume flow rate": "Flow2",
         "C2 - intake temperature": "Temp2",
-        "C2 - airend discharge temperature": "T2_2",
-        "C2 - local net pressure": "P2_2",
-        "C2 - electrical power consumption": "Power2",
-        "C3 - delivery volume flow rate": "Flow3",
         "C3 - intake temperature": "Temp3",
+        "C1 - airend discharge temperature": "T2_1",
+        "C2 - airend discharge temperature": "T2_2",
         "C3 - airend discharge temperature": "T2_3",
+        "C1 - local net pressure": "P2_1",
+        "C2 - local net pressure": "P2_2",
         "C3 - local net pressure": "P2_3",
+        "C1 - electrical power consumption": "Power1",
+        "C2 - electrical power consumption": "Power2",
         "C3 - electrical power consumption": "Power3"
     }
     df.rename(columns=rename_map, inplace=True)
@@ -133,23 +124,16 @@ if uploaded_file:
             )
             comp_df = comp_df[valid]
 
-            
             P1 = ambient_pressure_bar
             P2 = comp_df[pressure_col]
-            T1 = comp_df[intake_temp_col] + 273.15  # Convert to Kelvin
-            T2 = comp_df[discharge_temp_col] + 273.15  # Convert to Kelvin
+            T1 = comp_df[intake_temp_col] + 273.15
+            T2 = comp_df[discharge_temp_col] + 273.15
 
             V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
             n_vals = n_vals.replace([np.inf, -np.inf], np.nan).dropna()
-           
 
             df.loc[comp_df.index, f'n_{i}'] = n_vals
-
-            st.write(f"### Compressor C{i} Polytropic Exponent")
-            st.markdown(f"**Average n :** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
-
-    df.loc[comp_df.index, f'n_{i}'] = n_vals            
 
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
@@ -203,7 +187,7 @@ if uploaded_file:
 
    # Step 4: Effectiveness and Carbon Emission Evaluation
     st.subheader("Effectiveness and Carbon Emission Evaluation")
-    with st.expander("🔁 Compare with Modified Configuration"):
+    with st.expander("Compare with Modified Configuration"):
         mod_receiver_tank_liters = st.number_input("Modified Receiver Tank Volume (liters)", min_value=100.0, value=receiver_tank_liters, step=50.0)
         mod_receiver_tank_m3 = mod_receiver_tank_liters / 1000.0
         mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar)
@@ -295,7 +279,7 @@ if uploaded_file:
             df_summary = pd.DataFrame(effectiveness_rows)
             st.dataframe(df_summary)
 
-            st.write("### 🌍 Carbon Emissions (TCO₂e)")
+            st.write("### Carbon Emissions (TCO₂e)")
             co2_factor = 0.341 / 1000  # TCO2e per kWh
             tco2e_base = total_energy_base * co2_factor
             tco2e_mod = total_energy_mod * co2_factor
