@@ -49,6 +49,7 @@ adjusted_set_pressure = set_pressure + total_pressure_drop
 
 st.sidebar.subheader("Motor Efficiency")
 motor_efficiency = st.sidebar.slider("Motor Efficiency (%)", min_value=80, max_value=100, value=95) / 100.0
+
 st.sidebar.subheader("Receiver Tank")
 receiver_tank_liters = st.sidebar.number_input("Receiver Tank Volume (liters)", min_value=100.0, value=1000.0, step=50.0)
 receiver_tank_m3 = receiver_tank_liters / 1000.0
