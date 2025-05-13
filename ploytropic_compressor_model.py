@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -117,7 +115,7 @@ if uploaded_file:
     st.write("### File Preview")
     st.dataframe(df.head())
 
-    st.subheader("📐 Polytropic Exponent (n) Calculation from Data")
+    st.subheader("\ud83d\udcd0 Polytropic Exponent (n) Calculation from Data")
     for i in range(1, 4):
         on_col = f"C{i} On Time"
         power_col = f"Power{i}"
@@ -144,15 +142,14 @@ if uploaded_file:
             st.write(f"### Compressor C{i} Polytropic Exponent")
             st.markdown(f"**Average n :** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
 
-
-st.subheader("Real Compressor Efficiency Summary")
-summaries = []
-for i in range(1, 4):
-    flow_col = f'Flow{i}'
-    temp_col = f'Temp{i}'
-    power_col = f'Power{i}'
-    on_col = f'C{i} On Time'
-    n_col = f'n_{i}'
+    st.subheader("Real Compressor Efficiency Summary")
+    summaries = []
+    for i in range(1, 4):
+        flow_col = f'Flow{i}'
+        temp_col = f'Temp{i}'
+        power_col = f'Power{i}'
+        on_col = f'C{i} On Time'
+        n_col = f'n_{i}'
 
         if flow_col in df.columns and temp_col in df.columns and power_col in df.columns and on_col in df.columns:
             flow_m3s = df[flow_col] / 60
