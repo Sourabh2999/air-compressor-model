@@ -133,14 +133,16 @@ if uploaded_file:
             )
             comp_df = comp_df[valid]
 
+            
             P1 = ambient_pressure_bar
             P2 = comp_df[pressure_col]
-            T1 = comp_df[intake_temp_col]
-            T2 = comp_df[discharge_temp_col]
+            T1 = comp_df[intake_temp_col] + 273.15  # Convert to Kelvin
+            T2 = comp_df[discharge_temp_col] + 273.15  # Convert to Kelvin
 
             V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
-            
+            n_vals = n_vals.replace([np.inf, -np.inf], np.nan).dropna()
+            n_vals = n_vals.clip(lower=1.1, upper=1.4)
 
             df.loc[comp_df.index, f'n_{i}'] = n_vals
 
