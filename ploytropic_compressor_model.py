@@ -82,8 +82,8 @@ def calculate_tank_energy(Pa, P2, V):
 st.subheader("Ideal Compressor Work Calculation")
 total_ideal_work = 0
 for i in range(3):
-    flow_rate = flow_rates[i] / 60  # convert to m3/s
-    Qm = flow_rate * air_density  # mass flow rate (kg/s)
+    flow_rate = flow_rates[i] / 60  # m3/s
+    Qm = flow_rate * air_density    # kg/s
     work = calculate_ideal_work(
         ambient_pressure,
         adjusted_set_pressure,
@@ -91,10 +91,10 @@ for i in range(3):
         Qm,
         flow_rate_m3_min=flow_rates[i],
         model=selected_models[i]
-    )
+    ) / motor_efficiency  # Adjusted by motor efficiency
     total_ideal_work += work
 
-st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work / 1000:.2f} kW")
+st.markdown(f"**Total Ideal Compressor Work (adjusted for motor efficiency):** {total_ideal_work / 1000:.2f} kW")
 
 st.subheader("Upload Historical Compressor Data")
 uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
