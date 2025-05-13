@@ -142,7 +142,7 @@ if uploaded_file:
             df.loc[comp_df.index, f'n_{i}'] = n_vals
 
             st.write(f"### Compressor C{i} Polytropic Exponent")
-            st.markdown(f"**Average n (Power > 3kW & ON):** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
+            st.markdown(f"**Average n :** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
 
 
 st.subheader("Real Compressor Efficiency Summary")
@@ -180,7 +180,7 @@ st.subheader("Real Compressor Efficiency Summary")
                 "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'][(df[on_col] == 1) & (df[power_col] > 3)].mean():.2f}",
                 "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'][(df[on_col] == 1) & (df[power_col] > 3)].mean() * 100):.2f}",
                 "Duty Cycle (%)": f"{duty_cycle:.2f}",
-                "Avg n (Power > 3kW & ON)": f"{avg_n_filtered:.3f}"
+                "Avg n ": f"{avg_n_filtered:.3f}"
             })
 
     if summaries:
@@ -188,7 +188,7 @@ st.subheader("Real Compressor Efficiency Summary")
         st.dataframe(pd.DataFrame(summaries))
 
 
-    # Step 4: Effectiveness and Carbon Emission Evaluation
+   # Step 4: Effectiveness and Carbon Emission Evaluation
     st.subheader("Effectiveness and Carbon Emission Evaluation")
     with st.expander("🔁 Compare with Modified Configuration"):
         mod_receiver_tank_liters = st.number_input("Modified Receiver Tank Volume (liters)", min_value=100.0, value=receiver_tank_liters, step=50.0)
