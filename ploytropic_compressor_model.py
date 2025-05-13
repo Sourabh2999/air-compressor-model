@@ -149,47 +149,56 @@ if uploaded_file:
             st.write(f"### Compressor C{i} Polytropic Exponent")
             st.markdown(f"**Average n :** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
 
+               df.loc[comp_df.index, f'n_{i}'] = n_vals
+
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
     for i in range(1, 4):
-        flow_col = f'Flow{i}'
+        flow_col = f"C{i} - delivery volume flow rate"
         temp_col = f'Temp{i}'
         power_col = f'Power{i}'
         on_col = f'C{i} On Time'
         n_col = f'n_{i}'
 
         if flow_col in df.columns and temp_col in df.columns and power_col in df.columns and on_col in df.columns:
-            flow_m3s = df[flow_col] / 60
-            temp_K = df[temp_col] + 273.15
-            Qm = flow_m3s * air_density
-            n_values = df[n_col].where((df[on_col] == 1) & (df[power_col] > 3), np.nan).fillna(n_default)
+            valid = df[(df[on_col] == 1) & (df[power_col] > 3) & (df[flow_col] > 0)]
+            if not valid.empty:
+                flow_m3s = valid[flow_col] / 60
+                temp_K = valid[temp_col] + 273.15
+                Qm = flow_m3s * air_density
+                n_values = valid[n_col].fillna(n_default)
 
-            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(
-                ambient_pressure, adjusted_set_pressure, temp_K, Qm,
-                flow_rate_m3_min=df[flow_col], model=selected_models[i - 1], n=n_values) / 1000
+                df.loc[valid.index, f'Ideal_Power_{i}_kW'] = calculate_ideal_work(
+                    ambient_pressure, adjusted_set_pressure, temp_K, Qm,
+                    flow_rate_m3_min=valid[flow_col], model=selected_models[i - 1], n=n_values) / 1000
 
-            actual_power = df[power_col]
-            df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / actual_power.replace(0, np.nan)
-            df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
+                actual_power = valid[power_col]
+                df.loc[valid.index, f'Efficiency_{i}'] = df.loc[valid.index, f'Ideal_Power_{i}_kW'] / actual_power.replace(0, np.nan)
+                df.loc[valid.index, f'Efficiency_{i}'] = df.loc[valid.index, f'Efficiency_{i}'].clip(upper=1.5)
 
-            duty_cycle = df[on_col].mean() * 100
+                avg_power = actual_power.mean()
+                avg_flow = valid[flow_col].mean()
+                sec_kw_per_m3min = avg_power / avg_flow if avg_flow > 0 else np.nan
 
-            avg_n_filtered = df[(df[on_col] == 1) & (df[power_col] > 3)][n_col].mean() if n_col in df.columns else n_default
+                duty_cycle = valid[on_col].mean() * 100
+                avg_n_filtered = n_values.mean()
 
-            summaries.append({
-                "Compressor": f"C{i}",
-                "Avg Air Generated (m³/min)": f"{df[flow_col][(df[on_col] == 1) & (df[power_col] > 3)].mean():.2f}",
-                "Avg Power Consumed (kW)": f"{actual_power[(df[on_col] == 1) & (df[power_col] > 3)].mean():.2f}",
-                "Avg Temp (°C)": f"{df[temp_col][(df[on_col] == 1) & (df[power_col] > 3)].mean():.2f}",
-                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'][(df[on_col] == 1) & (df[power_col] > 3)].mean():.2f}",
-                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'][(df[on_col] == 1) & (df[power_col] > 3)].mean() * 100):.2f}",
-                "Duty Cycle (%)": f"{duty_cycle:.2f}",
-                "Avg n ": f"{avg_n_filtered:.3f}"
-            })
+                summaries.append({
+                    "Compressor": f"C{i}",
+                    "Avg Air Generated (m³/min)": f"{avg_flow:.2f}",
+                    "Avg Power Consumed (kW)": f"{avg_power:.2f}",
+                    "Avg Temp (°C)": f"{valid[temp_col].mean():.2f}",
+                    "Avg Ideal Power (kW)": f"{df.loc[valid.index, f'Ideal_Power_{i}_kW'].mean():.2f}",
+                    "Avg Efficiency (%)": f"{(df.loc[valid.index, f'Efficiency_{i}'].mean() * 100):.2f}",
+                    "Duty Cycle (%)": f"{duty_cycle:.2f}",
+                    "Avg n ": f"{avg_n_filtered:.3f}",
+                    "SEC (kW/m³/min)": f"{sec_kw_per_m3min:.3f}"
+                })
 
     if summaries:
         st.write("### Compressor Efficiency Summary Table")
         st.dataframe(pd.DataFrame(summaries))
+
 
 
    # Step 4: Effectiveness and Carbon Emission Evaluation
