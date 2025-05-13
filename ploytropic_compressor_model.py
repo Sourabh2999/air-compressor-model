@@ -19,7 +19,7 @@ try:
     df_models = pd.read_csv("Compressors Models_python.csv", encoding='ISO-8859-1')
     df_models.rename(columns={df_models.columns[0]: "Model"}, inplace=True)
     unique_models = sorted(df_models['Model'].dropna().unique().tolist())
-except Exception as e:
+except Exception:
     df_models = pd.DataFrame()
     unique_models = []
 
@@ -83,10 +83,6 @@ def calculate_ideal_work(Pa, P2, Ta, Qm, flow_rate_m3_min=None, model=None, n=n_
     term = (P2 / Pa)**((n - 1) / n) - 1
     return (n / (n - 1)) * Qm * R * Ta * term
 
-# Function to compute tank energy
-def calculate_tank_energy(Pa, P2, V):
-    return (P2 * V / (k - 1)) * ((P2 / Pa)**((k - 1) / k) - 1)
-
 # Step 1: Ideal baseline work
 st.subheader("Ideal Compressor Work Calculation")
 total_ideal_work = 0
@@ -128,7 +124,8 @@ if uploaded_file:
     st.write("### File Preview")
     st.dataframe(df.head())
 
-   st.subheader("📐 Polytropic Exponent (n) Calculation from Data")
+    # Polytropic Exponent Calculation
+    st.subheader("📐 Polytropic Exponent (n) Calculation from Data")
     for i in range(1, 4):
         on_col = f"C{i} On Time"
         intake_temp_col = f"Temp{i}"
@@ -136,7 +133,7 @@ if uploaded_file:
         pressure_col = f"P2_{i}"
 
         if all(col in df.columns for col in [on_col, intake_temp_col, discharge_temp_col, pressure_col]):
-            comp_df = df[df[on_col] == 1].copy()
+            comp_df = df[(df[on_col] == 1)].copy()
             valid = (comp_df[pressure_col] > 0) & (comp_df[intake_temp_col] > 0) & (comp_df[discharge_temp_col] > 0)
             comp_df = comp_df[valid]
 
@@ -145,15 +142,16 @@ if uploaded_file:
             T1 = comp_df[intake_temp_col]
             T2 = comp_df[discharge_temp_col]
 
-            # Correct formula for volume ratio
             V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
+            n_vals = n_vals.clip(lower=1.0, upper=2.2)
 
             df.loc[comp_df.index, f'n_{i}'] = n_vals
 
             st.write(f"### Compressor C{i} Polytropic Exponent")
-            st.markdown(f"**Average n:** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
+            st.markdown(f"**Average n (ON only):** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
 
+    # Efficiency Calculation
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
     for i in range(1, 4):
@@ -167,23 +165,26 @@ if uploaded_file:
             flow_m3s = df[flow_col] / 60
             temp_K = df[temp_col] + 273.15
             Qm = flow_m3s * air_density
-            n_values = df.get(n_col, n_default)
-            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, temp_K, Qm, flow_rate_m3_min=df[flow_col], model=selected_models[i - 1], n=n_values) / 1000
+            n_values = df[n_col].where(df[on_col] == 1, np.nan).fillna(n_default)
+
+            df[f'Ideal_Power_{i}_kW'] = calculate_ideal_work(
+                ambient_pressure, adjusted_set_pressure, temp_K, Qm,
+                flow_rate_m3_min=df[flow_col], model=selected_models[i - 1], n=n_values) / 1000
+
             actual_power = df[power_col]
             df[f'Efficiency_{i}'] = df[f'Ideal_Power_{i}_kW'] / actual_power.replace(0, np.nan)
             df[f'Efficiency_{i}'] = df[f'Efficiency_{i}'].clip(upper=1.5)
 
             duty_cycle = df[on_col].mean() * 100
-
             avg_n_filtered = df[df[on_col] == 1][n_col].mean() if n_col in df.columns else n_default
 
             summaries.append({
                 "Compressor": f"C{i}",
-                "Avg Air Generated (m³/min)": f"{df[flow_col].mean():.2f}",
-                "Avg Power Consumed (kW)": f"{actual_power.mean():.2f}",
-                "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
-                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
-                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
+                "Avg Air Generated (m³/min)": f"{df[flow_col][df[on_col] == 1].mean():.2f}",
+                "Avg Power Consumed (kW)": f"{actual_power[df[on_col] == 1].mean():.2f}",
+                "Avg Temp (°C)": f"{df[temp_col][df[on_col] == 1].mean():.2f}",
+                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'][df[on_col] == 1].mean():.2f}",
+                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'][df[on_col] == 1].mean() * 100):.2f}",
                 "Duty Cycle (%)": f"{duty_cycle:.2f}",
                 "Avg n (ON only)": f"{avg_n_filtered:.3f}"
             })
@@ -222,19 +223,20 @@ if uploaded_file:
             flow_col = f"Flow{i}"
             temp_col = f"Temp{i}"
             power_col = f"Power{i}"
+            on_col = f"C{i} On Time"
             n_col = f"n_{i}"
 
             if flow_col in df.columns and temp_col in df.columns and power_col in df.columns:
                 flow_m3s = df[flow_col] / 60
                 temp_K = df[temp_col] + 273.15
                 Qm = flow_m3s * air_density
-                n_values = df.get(n_col, n_default)
+                n_values = df[n_col].where(df[on_col] == 1, np.nan).fillna(n_default)
 
                 base_ideal_power = df[f"Ideal_Power_{i}_kW"]
                 mod_ideal_power = calculate_ideal_work(ambient_pressure, mod_set_pressure, temp_K, Qm, n=n_values) / 1000
 
-                energy_base = (base_ideal_power * (5 / 60)).sum() + base_tank_energy_kWh
-                energy_mod = (mod_ideal_power * (5 / 60)).sum() + mod_tank_energy_kWh
+                energy_base = (base_ideal_power[df[on_col] == 1] * (5 / 60)).sum() + base_tank_energy_kWh
+                energy_mod = (mod_ideal_power[df[on_col] == 1] * (5 / 60)).sum() + mod_tank_energy_kWh
                 cost_base = energy_base * 0.12
                 cost_mod = energy_mod * 0.12
 
@@ -255,16 +257,16 @@ if uploaded_file:
                     "Modified Design Tank Energy (kWh)": f"{mod_tank_energy_kWh:.2f}",
                     "Original Design Cost (€/yr)": f"{cost_base:.2f}",
                     "Modified Design Cost (€/yr)": f"{cost_mod:.2f}",
-                    "Original Design Efficiency (%)": f"{(base_efficiency.mean() * 100):.2f}",
-                    "Modified Design Efficiency (%)": f"{(mod_efficiency.mean() * 100):.2f}"
+                    "Original Design Efficiency (%)": f"{(base_efficiency[df[on_col] == 1].mean() * 100):.2f}",
+                    "Modified Design Efficiency (%)": f"{(mod_efficiency[df[on_col] == 1].mean() * 100):.2f}"
                 })
 
                 total_energy_base += energy_base
                 total_energy_mod += energy_mod
                 total_cost_base += cost_base
                 total_cost_mod += cost_mod
-                total_base_efficiency += base_efficiency.mean()
-                total_mod_efficiency += mod_efficiency.mean()
+                total_base_efficiency += base_efficiency[df[on_col] == 1].mean()
+                total_mod_efficiency += mod_efficiency[df[on_col] == 1].mean()
                 count += 1
 
         if effectiveness_rows and count > 0:
