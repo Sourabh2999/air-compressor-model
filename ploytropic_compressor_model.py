@@ -146,7 +146,7 @@ if uploaded_file:
 
 
 st.subheader("Real Compressor Efficiency Summary")
-    summaries = []
+summaries = []
     for i in range(1, 4):
         flow_col = f'Flow{i}'
         temp_col = f'Temp{i}'
