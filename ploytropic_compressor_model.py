@@ -149,7 +149,7 @@ if uploaded_file:
             st.write(f"### Compressor C{i} Polytropic Exponent")
             st.markdown(f"**Average n :** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
 
-               df.loc[comp_df.index, f'n_{i}'] = n_vals
+               
 
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
