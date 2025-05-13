@@ -147,12 +147,12 @@ if uploaded_file:
 
 st.subheader("Real Compressor Efficiency Summary")
 summaries = []
-    for i in range(1, 4):
-        flow_col = f'Flow{i}'
-        temp_col = f'Temp{i}'
-        power_col = f'Power{i}'
-        on_col = f'C{i} On Time'
-        n_col = f'n_{i}'
+for i in range(1, 4):
+    flow_col = f'Flow{i}'
+    temp_col = f'Temp{i}'
+    power_col = f'Power{i}'
+    on_col = f'C{i} On Time'
+    n_col = f'n_{i}'
 
         if flow_col in df.columns and temp_col in df.columns and power_col in df.columns and on_col in df.columns:
             flow_m3s = df[flow_col] / 60
