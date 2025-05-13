@@ -164,7 +164,7 @@ if uploaded_file:
                 avg_flow = valid[flow_col].mean()
                 sec_kw_per_m3min = avg_power / avg_flow if avg_flow > 0 else np.nan
 
-                duty_cycle = valid[on_col].mean() * 100
+                duty_cycle = df[on_col].mean() * 100
                 avg_n_filtered = n_values.mean()
 
                 summaries.append({
