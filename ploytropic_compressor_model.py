@@ -76,46 +76,8 @@ def calculate_ideal_work(Pa, P2, Ta, Qm, flow_rate_m3_min=None, model=None, n=n_
 def calculate_tank_energy(Pa, P2, V):
     return (P2 * V / (k - 1)) * ((P2 / Pa)**((k - 1) / k) - 1)
 
-st.subheader("Ideal Compressor Work Calculation")
-total_ideal_work = 0
-for i in range(3):
-    flow_rate = flow_rates[i] / 60
-    Qm = flow_rate * air_density
-    work = calculate_ideal_work(ambient_pressure, adjusted_set_pressure, ambient_temp, Qm, flow_rate_m3_min=flow_rates[i], model=selected_models[i])
-    total_ideal_work += work
-
-st.markdown(f"**Total Ideal Compressor Work (3 Compressors, with Pressure Losses):** {total_ideal_work/1000:.2f} kW")
-
-st.subheader("Upload Historical Compressor Data")
-uploaded_file = st.file_uploader("Upload Compressor Data File (CSV or Excel)", type=["csv", "xlsx"])
-
-if uploaded_file:
-    df = pd.read_excel(uploaded_file) if uploaded_file.name.endswith(".xlsx") else pd.read_csv(uploaded_file)
-    df.rename(columns=lambda x: x.strip(), inplace=True)
-    rename_map = {
-        "C1 - delivery volume flow rate": "Flow1",
-        "C1 - intake temperature": "Temp1",
-        "C1 - airend discharge temperature": "T2_1",
-        "C1 - local net pressure": "P2_1",
-        "C1 - electrical power consumption": "Power1",
-        "C2 - delivery volume flow rate": "Flow2",
-        "C2 - intake temperature": "Temp2",
-        "C2 - airend discharge temperature": "T2_2",
-        "C2 - local net pressure": "P2_2",
-        "C2 - electrical power consumption": "Power2",
-        "C3 - delivery volume flow rate": "Flow3",
-        "C3 - intake temperature": "Temp3",
-        "C3 - airend discharge temperature": "T2_3",
-        "C3 - local net pressure": "P2_3",
-        "C3 - electrical power consumption": "Power3"
-    }
-    df.rename(columns=rename_map, inplace=True)
-    df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
-
-    st.write("### File Preview")
-    st.dataframe(df.head())
-
-    st.subheader("Polytropic Exponent (n) Calculation from Data")
+st.subheader("Polytropic Exponent (n) Calculation from Data")
+if 'df' in locals():
     for i in range(1, 4):
         on_col = f"C{i} On Time"
         power_col = f"Power{i}"
@@ -125,7 +87,12 @@ if uploaded_file:
 
         if all(col in df.columns for col in [on_col, power_col, intake_temp_col, discharge_temp_col, pressure_col]):
             comp_df = df[(df[on_col] == 1) & (df[power_col] > 3)].copy()
-            valid = (comp_df[pressure_col] > 0) & (comp_df[intake_temp_col] > 0) & (comp_df[discharge_temp_col] > 0) & ((comp_df[discharge_temp_col] - comp_df[intake_temp_col]).abs() > 3)
+            valid = (
+                (comp_df[pressure_col] > ambient_pressure_bar * 1.1) &
+                (comp_df[intake_temp_col] > 0) &
+                (comp_df[discharge_temp_col] > 0) &
+                ((comp_df[discharge_temp_col] - comp_df[intake_temp_col]).abs() > 5)
+            )
             comp_df = comp_df[valid]
 
             P1 = ambient_pressure_bar
@@ -135,12 +102,13 @@ if uploaded_file:
 
             V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
-            n_vals = n_vals.clip(lower=1.1, upper=2.2)
+            n_vals = n_vals.clip(lower=1.1, upper=1.4)  # Physically reasonable bounds for air compression
 
             df.loc[comp_df.index, f'n_{i}'] = n_vals
 
             st.write(f"### Compressor C{i} Polytropic Exponent")
             st.markdown(f"**Average n :** {n_vals.mean():.3f}  |  Min: {n_vals.min():.3f}  |  Max: {n_vals.max():.3f}")
+
 
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
