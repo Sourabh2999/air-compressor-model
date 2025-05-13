@@ -142,7 +142,7 @@ if uploaded_file:
             V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
             n_vals = n_vals.replace([np.inf, -np.inf], np.nan).dropna()
-            n_vals = n_vals.clip(lower=1.1, upper=1.4)
+           
 
             df.loc[comp_df.index, f'n_{i}'] = n_vals
 
