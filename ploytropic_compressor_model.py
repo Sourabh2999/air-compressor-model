@@ -173,16 +173,17 @@ if uploaded_file:
 
             duty_cycle = df[on_col].mean() * 100
 
-        summaries.append({
-    "Compressor": f"C{i}",
-    "Avg Air Generated (m³/min)": f"{df[flow_col].mean():.2f}",
-    "Avg Power Consumed (kW)": f"{actual_power.mean():.2f}",
-    "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
-    "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
-    "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
-    "Duty Cycle (%)": f"{duty_cycle:.2f}",
-    "Avg n": f"{n_values.mean():.3f}"
-})
+   
+            summaries.append({
+                "Compressor": f"C{i}",
+                "Avg Air Generated (m³/min)": f"{df[flow_col].mean():.2f}",
+                "Avg Power Consumed (kW)": f"{actual_power.mean():.2f}",
+                "Avg Temp (°C)": f"{df[temp_col].mean():.2f}",
+                "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
+                "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
+                "Duty Cycle (%)": f"{duty_cycle:.2f}",
+                "Avg n": f"{n_values.mean():.3f}"
+            })
 
     if summaries:
         st.write("### Compressor Efficiency Summary Table")
