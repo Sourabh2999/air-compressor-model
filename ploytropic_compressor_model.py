@@ -47,9 +47,12 @@ filter_drop = st.sidebar.number_input("Filter Pressure Drop (bar)", min_value=0.
 total_pressure_drop = (aftercooler_drop + dryer_drop + filter_drop) * 100000
 adjusted_set_pressure = set_pressure + total_pressure_drop
 
+st.sidebar.subheader("Motor Efficiency")
+motor_efficiency = st.sidebar.slider("Motor Efficiency (%)", min_value=80, max_value=100, value=95) / 100.0
 st.sidebar.subheader("Receiver Tank")
 receiver_tank_liters = st.sidebar.number_input("Receiver Tank Volume (liters)", min_value=100.0, value=1000.0, step=50.0)
 receiver_tank_m3 = receiver_tank_liters / 1000.0
+
 
 R = 287
 k = 1.4
@@ -170,7 +173,7 @@ if uploaded_file:
 
                 df.loc[valid.index, f'Ideal_Power_{i}_kW'] = calculate_ideal_work(
                     ambient_pressure, adjusted_set_pressure, temp_K, Qm,
-                    flow_rate_m3_min=valid[flow_col], model=selected_models[i - 1], n=n_values) / 1000
+                    flow_rate_m3_min=valid[flow_col], model=selected_models[i - 1], n=n_values) / (1000 * motor_efficiency)
 
                 actual_power = valid[power_col]
                 df.loc[valid.index, f'Efficiency_{i}'] = df.loc[valid.index, f'Ideal_Power_{i}_kW'] / actual_power.replace(0, np.nan)
