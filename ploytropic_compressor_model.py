@@ -128,7 +128,7 @@ if uploaded_file:
     st.write("### File Preview")
     st.dataframe(df.head())
 
-    st.subheader("📐 Polytropic Exponent (n) Calculation from Data")
+   st.subheader("📐 Polytropic Exponent (n) Calculation from Data")
     for i in range(1, 4):
         on_col = f"C{i} On Time"
         intake_temp_col = f"Temp{i}"
@@ -145,8 +145,10 @@ if uploaded_file:
             T1 = comp_df[intake_temp_col]
             T2 = comp_df[discharge_temp_col]
 
+            # Correct formula for volume ratio
             V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
+
             df.loc[comp_df.index, f'n_{i}'] = n_vals
 
             st.write(f"### Compressor C{i} Polytropic Exponent")
@@ -173,7 +175,8 @@ if uploaded_file:
 
             duty_cycle = df[on_col].mean() * 100
 
-   
+            avg_n_filtered = df[df[on_col] == 1][n_col].mean() if n_col in df.columns else n_default
+
             summaries.append({
                 "Compressor": f"C{i}",
                 "Avg Air Generated (m³/min)": f"{df[flow_col].mean():.2f}",
@@ -182,7 +185,7 @@ if uploaded_file:
                 "Avg Ideal Power (kW)": f"{df[f'Ideal_Power_{i}_kW'].mean():.2f}",
                 "Avg Efficiency (%)": f"{(df[f'Efficiency_{i}'].mean() * 100):.2f}",
                 "Duty Cycle (%)": f"{duty_cycle:.2f}",
-                "Avg n": f"{n_values.mean():.3f}"
+                "Avg n (ON only)": f"{avg_n_filtered:.3f}"
             })
 
     if summaries:
