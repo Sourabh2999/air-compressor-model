@@ -352,4 +352,83 @@ if uploaded_file:
                 st.markdown(f"**Original Design Emissions:** {tco2e_base:.2f} TCO₂e/year")
                 st.markdown(f"**Modified Design Emissions:** {tco2e_mod:.2f} TCO₂e/year")
                 st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
-   
+# ---------------------------------------------------------------
+# 🔍 Compressor System Optimization: Best 2 or 3 model recommendation
+# ---------------------------------------------------------------
+
+import itertools
+
+best_configurations = []
+
+# Ensure model data is loaded
+if not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
+    demand_series = df["CO1 - consumption volume flow rate"].fillna(0).values  # m3/min
+    demand_series = np.clip(demand_series, a_min=0, a_max=None)
+    time_interval_hr = 5 / 60  # each row = 5 minutes
+    electricity_rate = 0.12  # €/kWh
+    annual_hours = 24 * 365
+    total_steps = len(demand_series)
+
+    # Preprocess compressor models
+    df_models_clean = df_models.copy()
+    df_models_clean.rename(columns={df_models_clean.columns[0]: "Model"}, inplace=True)
+    df_models_clean.dropna(subset=["Model", "Flow Rate (mÂ³/min)", "Drive Motor Rated Power (kW)"], inplace=True)
+    df_models_clean["Flow"] = df_models_clean["Flow Rate (mÂ³/min)"].astype(float)
+    df_models_clean["Power"] = df_models_clean["Drive Motor Rated Power (kW)"].astype(float)
+    df_models_clean["Type"] = df_models_clean["Speed Control"].fillna("Fixed")
+
+    all_models = df_models_clean[["Model", "Flow", "Power", "Type"]].drop_duplicates()
+
+    # Evaluate all 2-combo and 3-combo systems
+    for r in [2, 3]:
+        for combo in itertools.combinations(all_models.itertuples(index=False), r):
+            models = list(combo)
+            total_energy_kWh = 0.0
+            sufficient = True
+            on_time_counts = {m.Model: 0 for m in models}
+
+            for demand in demand_series:
+                assigned = 0.0
+                step_energy = 0.0
+                remaining = demand
+                sorted_models = sorted(models, key=lambda x: (x.Type != "VSD", -x.Flow))
+
+                for m in sorted_models:
+                    if remaining <= 0:
+                        break
+                    flow = min(m.Flow, remaining)
+                    if flow > 0:
+                        if m.Type == "VSD":
+                            power = (flow / m.Flow) * m.Power
+                        else:
+                            power = m.Power
+                            on_time_counts[m.Model] += 1  # Only fixed-speed is counted for on-time
+
+                        assigned += flow
+                        step_energy += power * time_interval_hr
+                        remaining -= flow
+
+                if assigned < demand:
+                    sufficient = False
+                    break
+                total_energy_kWh += step_energy
+
+            if sufficient:
+                cost = total_energy_kWh * electricity_rate
+                total_demand_volume = demand_series.sum()
+                duty_cycles = {model: round((count / total_steps) * 100, 2) for model, count in on_time_counts.items()}
+                best_configurations.append({
+                    "Models": [m.Model for m in models],
+                    "Types": [m.Type for m in models],
+                    "Total Energy (kWh)": round(total_energy_kWh, 2),
+                    "Estimated Cost (€/yr)": round(cost, 2),
+                    "SEC (kW/m³/min)": round(total_energy_kWh / total_demand_volume, 4),
+                    "Duty Cycles (%)": duty_cycles
+                })
+
+    # Rank and display top configurations
+    best_configurations.sort(key=lambda x: x["Total Energy (kWh)"])
+    st.subheader("🔍 Recommended Compressor System Configuration")
+    st.write("Based on your actual demand profile:")
+    st.dataframe(pd.DataFrame(best_configurations[:5]))
+
