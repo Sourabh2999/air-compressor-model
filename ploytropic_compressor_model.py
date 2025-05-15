@@ -22,9 +22,9 @@ except Exception:
 for i in range(1, 4):
     model = st.sidebar.selectbox(f"Compressor {i} Model", unique_models, index=0 if unique_models else None, key=f"model{i}")
     model_data = df_models[df_models['Model'] == model]
-    available_flows = sorted(model_data['Flow Rate (mÂ³/min)'].astype(float).unique())
+    available_flows = sorted(model_data['Flow Rate (m³/min)'].astype(float).unique())
     flow = st.sidebar.selectbox(f"Rated Flow Compressor {i} (m3/min)", available_flows, key=f"flow{i}")
-    pressure_match = model_data.iloc[(model_data['Flow Rate (mÂ³/min)'].astype(float) - flow).abs().argsort()[:1]]
+    pressure_match = model_data.iloc[(model_data['Flow Rate (m³/min)'].astype(float) - flow).abs().argsort()[:1]]
     rated_power = pressure_match['Drive Motor Rated Power (kW)'].values[0] if not pressure_match.empty else 0.0
     st.sidebar.markdown(f"**Rated Power Compressor {i}:** {rated_power:.2f} kW")
 
@@ -66,7 +66,7 @@ def calculate_ideal_work(Pa, P2, Ta, Qm, flow_rate_m3_min=None, model=None, n=n_
         if not model_data.empty and flow_rate_m3_min is not None:
             try:
                 pressure_match = model_data.iloc[(model_data['Operating Pressure (bar)'] - P2/100000).abs().argsort()[:3]]
-                flow_vals = pressure_match['Flow Rate (mÂ³/min)'].astype(float)
+                flow_vals = pressure_match['Flow Rate (m³/min)'].astype(float)
                 power_vals = pressure_match['Drive Motor Rated Power (kW)'].astype(float)
                 if len(flow_vals.unique()) > 1:
                     from scipy.interpolate import interp1d
@@ -372,13 +372,27 @@ if 'df' in locals() and not df.empty and not df_models.empty and "CO1 - consumpt
     # Preprocess compressor models
     df_models_clean = df_models.copy()
     df_models_clean.rename(columns={df_models_clean.columns[0]: "Model"}, inplace=True)
-    df_models_clean.dropna(subset=["Model", "Flow Rate (mÂ³/min)", "Drive Motor Rated Power (kW)"], inplace=True)
-    df_models_clean["Flow"] = df_models_clean["Flow Rate (mÂ³/min)"].astype(float)
+    df_models_clean.dropna(subset=["Model", "Flow Rate (m³/min)", "Drive Motor Rated Power (kW)"], inplace=True)
+    df_models_clean["Flow"] = df_models_clean["Flow Rate (m³/min)"].astype(float)
     df_models_clean["Power"] = df_models_clean["Drive Motor Rated Power (kW)"].astype(float)
     if "Speed Control" in df_models_clean.columns:
         df_models_clean["Type"] = df_models_clean["Speed Control"].fillna("Fixed")
     else:
         df_models_clean["Type"] = "Fixed"
+
+    # Compute average and peak demand
+    avg_demand = demand_series.mean()
+    peak_demand = demand_series.max()
+    min_required_flow = avg_demand * 1.1  # 10% margin
+
+    # Filter models that can supply the minimum required demand
+    def is_model_suitable(row):
+        if row["Type"] == "VSD":
+            return row["Flow"] >= 1  # VSD assumed min = 1 m3/min
+        else:
+            return row["Flow"] >= min_required_flow
+
+    df_models_clean = df_models_clean[df_models_clean.apply(is_model_suitable, axis=1)]
 
     all_models = df_models_clean[["Model", "Flow", "Power", "Type"]].drop_duplicates()
 
