@@ -231,6 +231,16 @@ if uploaded_file:
 
             base_tank_energy_kWh = calculate_tank_energy(ambient_pressure, adjusted_set_pressure, receiver_tank_m3) / 3600
             mod_tank_energy_kWh = calculate_tank_energy(ambient_pressure, mod_set_pressure, mod_receiver_tank_m3) / 3600
+            # Skip modified simulation if user hasn't changed anything
+show_modified = not (
+    mod_set_pressure_bar == set_pressure_bar and
+    mod_aftercooler_drop == aftercooler_drop and
+    mod_dryer_drop == dryer_drop and
+    mod_filter_drop == filter_drop and
+    mod_receiver_tank_liters == receiver_tank_liters
+    )
+
+if show_modified:
             # Constants for simulation
             R = 287
             T = 293.15
