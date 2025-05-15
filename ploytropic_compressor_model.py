@@ -305,8 +305,7 @@ if uploaded_file:
                 st.markdown(f"**Original Design Emissions:** {tco2e_base:.2f} TCO₂e/year")
                 st.markdown(f"**Modified Design Emissions:** {tco2e_mod:.2f} TCO₂e/year")
                 st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
-                
-                with st.expander("📉 Dynamic Tank Pressure Simulation (Modified Configuration)"):
+        with st.expander("📉 Dynamic Tank Pressure Simulation (Modified Configuration)"):
                     # Constants for simulation
                     R = 287
                     T = 293.15
@@ -355,7 +354,8 @@ if uploaded_file:
                     st.line_chart(df.set_index("Timestamp")["Modified_Tank_Pressure_bar"], use_container_width=True)
                     st.metric("Total Buffer Energy Impact (kWh)", f"{total_buffer_energy_kWh:.2f}")
                     st.dataframe(df[["Timestamp", "Modified_Tank_Pressure_bar", "dE_kWh"]].tail(10))
-
+     
+                
                         
             
             
