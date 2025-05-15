@@ -361,7 +361,7 @@ import itertools
 best_configurations = []
 
 # Ensure model data is loaded
-if not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
+if 'df' in locals() and not df.empty and not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
     demand_series = df["CO1 - consumption volume flow rate"].fillna(0).values  # m3/min
     demand_series = np.clip(demand_series, a_min=0, a_max=None)
     time_interval_hr = 5 / 60  # each row = 5 minutes
