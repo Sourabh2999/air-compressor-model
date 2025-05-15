@@ -375,7 +375,10 @@ if not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
     df_models_clean.dropna(subset=["Model", "Flow Rate (mÂ³/min)", "Drive Motor Rated Power (kW)"], inplace=True)
     df_models_clean["Flow"] = df_models_clean["Flow Rate (mÂ³/min)"].astype(float)
     df_models_clean["Power"] = df_models_clean["Drive Motor Rated Power (kW)"].astype(float)
-    df_models_clean["Type"] = df_models_clean["Speed Control"].fillna("Fixed")
+    if "Speed Control" in df_models_clean.columns:
+        df_models_clean["Type"] = df_models_clean["Speed Control"].fillna("Fixed")
+    else:
+        df_models_clean["Type"] = "Fixed"
 
     all_models = df_models_clean[["Model", "Flow", "Power", "Type"]].drop_duplicates()
 
@@ -429,8 +432,8 @@ if not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
     # Rank and display top configurations
     best_configurations.sort(key=lambda x: x["Total Energy (kWh)"])
     st.subheader("🔍 Recommended Compressor System Configuration")
-    st.write("Based on your actual demand profile:")
-    # Flatten the output for proper display
+    st.write("Based on your actual demand profile and available compressor models:")
+    # Flatten and display cleanly
     display_df = []
     for row in best_configurations[:5]:
         flat_row = {
@@ -447,6 +450,5 @@ if not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
         for model, duty in row["Duty Cycles (%)"].items():
             flat_row[f"Duty {model} (%)"] = duty
         display_df.append(flat_row)
+
     st.dataframe(pd.DataFrame(display_df))
-
-
