@@ -435,7 +435,7 @@ if not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
     st.write("Based on your actual demand profile and available compressor models:")
     # Flatten and display cleanly
     display_df = []
-    for row in best_configurations[:5]:
+    for row in best_configurations[:2]:
         flat_row = {
             "Compressor 1": row["Models"][0],
             "Type 1": row["Types"][0],
