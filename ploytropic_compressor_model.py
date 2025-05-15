@@ -430,5 +430,23 @@ if not df_models.empty and "CO1 - consumption volume flow rate" in df.columns:
     best_configurations.sort(key=lambda x: x["Total Energy (kWh)"])
     st.subheader("🔍 Recommended Compressor System Configuration")
     st.write("Based on your actual demand profile:")
-    st.dataframe(pd.DataFrame(best_configurations[:5]))
+    # Flatten the output for proper display
+    display_df = []
+    for row in best_configurations[:5]:
+        flat_row = {
+            "Compressor 1": row["Models"][0],
+            "Type 1": row["Types"][0],
+            "Compressor 2": row["Models"][1] if len(row["Models"]) > 1 else None,
+            "Type 2": row["Types"][1] if len(row["Types"]) > 1 else None,
+            "Compressor 3": row["Models"][2] if len(row["Models"]) > 2 else None,
+            "Type 3": row["Types"][2] if len(row["Types"]) > 2 else None,
+            "Total Energy (kWh)": row["Total Energy (kWh)"],
+            "Estimated Cost (€/yr)": row["Estimated Cost (€/yr)"],
+            "SEC (kW/m³/min)": row["SEC (kW/m³/min)"]
+        }
+        for model, duty in row["Duty Cycles (%)"].items():
+            flat_row[f"Duty {model} (%)"] = duty
+        display_df.append(flat_row)
+    st.dataframe(pd.DataFrame(display_df))
+
 
