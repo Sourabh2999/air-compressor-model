@@ -305,7 +305,7 @@ if uploaded_file:
                 st.markdown(f"**Original Design Emissions:** {tco2e_base:.2f} TCO₂e/year")
                 st.markdown(f"**Modified Design Emissions:** {tco2e_mod:.2f} TCO₂e/year")
                 st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
-        with st.expander("📉 Dynamic Tank Pressure Simulation (Modified Configuration)"):
+    with st.expander("📉 Dynamic Tank Pressure Simulation (Modified Configuration)"):
                     # Constants for simulation
                     R = 287
                     T = 293.15
