@@ -305,57 +305,60 @@ if uploaded_file:
                 st.markdown(f"**Original Design Emissions:** {tco2e_base:.2f} TCO₂e/year")
                 st.markdown(f"**Modified Design Emissions:** {tco2e_mod:.2f} TCO₂e/year")
                 st.markdown(f"**Reduction:** {tco2e_base - tco2e_mod:.2f} TCO₂e/year")
-                        with st.expander("📉 Dynamic Tank Pressure Simulation (Modified Configuration)"):
-            # Constants for simulation
-            R = 287
-            T = 293.15
-            rho = 1.225
+                
+                with st.expander("📉 Dynamic Tank Pressure Simulation (Modified Configuration)"):
+                    # Constants for simulation
+                    R = 287
+                    T = 293.15
+                    rho = 1.225
+                    # Flow preprocessing
+                    for i in range(1, 4):
+                        df[f"C{i}_flow_m3s"] = df[f"C{i} - delivery volume flow rate"] / 60
+                        df[f"C{i}_on"] = df[f"C{i} On Time"]
+                    df["Q_in"] = sum(df[f"C{i}_flow_m3s"] * df[f"C{i}_on"] for i in range(1, 4))
+                    df["Q_out"] = df["CO1 - consumption volume flow rate"] / 60
+                    df["dt"] = df["Timestamp"].diff().dt.total_seconds().fillna(0)
+                    #Initial pressure
+                    initial_pressure_bar = df["CO1 - net pressure"].iloc[0]
+                    initial_pressure_Pa = initial_pressure_bar * 100000
+                    V_tank_mod = mod_receiver_tank_liters / 1000.0
+            
+                    #Pressure simulation
+                    pressure_mod_Pa = [initial_pressure_Pa]
+                    for idx in range(1, len(df)):
+                        Q_in = df["Q_in"].iloc[idx]
+                        Q_out = df["Q_out"].iloc[idx]
+                        dt = df["dt"].iloc[idx]
+                        dP = (R * T * rho / V_tank_mod) * (Q_in - Q_out) * dt
+                        P_new = pressure_mod_Pa[-1] + dP
+                        P_new = max(P_new, 100000)
+                        P_new = min(P_new, 1200000)
+                        pressure_mod_Pa.append(P_new)
+                    df["Modified_Tank_Pressure_bar"] = np.array(pressure_mod_Pa) / 100000
 
-            # Flow preprocessing
-            for i in range(1, 4):
-                df[f"C{i}_flow_m3s"] = df[f"C{i} - delivery volume flow rate"] / 60
-                df[f"C{i}_on"] = df[f"C{i} On Time"]
+                    # Approximate energy impact due to tank buffer effect
+                    df["dE_kWh"] = 0.0
+                    for i in range(1, len(df)):
+                        P1 = pressure_mod_Pa[i-1]
+                        P2 = pressure_mod_Pa[i]
+                        if P2 > 0 and P1 > 0:
+                            try:
+                                dE = V_tank_mod * (P2 - P1) / (3600 * 1000)
+                            except ZeroDivisionError:
+                                dE = 0.0
+                        else:
+                            dE = 0.0
+                        df.at[df.index[i], "dE_kWh"] = dE
 
-            df["Q_in"] = sum(df[f"C{i}_flow_m3s"] * df[f"C{i}_on"] for i in range(1, 4))
-            df["Q_out"] = df["CO1 - consumption volume flow rate"] / 60
-            df["dt"] = df["Timestamp"].diff().dt.total_seconds().fillna(0)
+                    total_buffer_energy_kWh = df["dE_kWh"].sum()
 
-            # Initial pressure
-            initial_pressure_bar = df["CO1 - net pressure"].iloc[0]
-            initial_pressure_Pa = initial_pressure_bar * 100000
-            V_tank_mod = mod_receiver_tank_liters / 1000.0
+                    st.line_chart(df.set_index("Timestamp")["Modified_Tank_Pressure_bar"], use_container_width=True)
+                    st.metric("Total Buffer Energy Impact (kWh)", f"{total_buffer_energy_kWh:.2f}")
+                    st.dataframe(df[["Timestamp", "Modified_Tank_Pressure_bar", "dE_kWh"]].tail(10))
 
-            # Pressure simulation
-            pressure_mod_Pa = [initial_pressure_Pa]
-            for idx in range(1, len(df)):
-                Q_in = df["Q_in"].iloc[idx]
-                Q_out = df["Q_out"].iloc[idx]
-                dt = df["dt"].iloc[idx]
-                dP = (R * T * rho / V_tank_mod) * (Q_in - Q_out) * dt
-                P_new = pressure_mod_Pa[-1] + dP
-                P_new = max(P_new, 100000)
-                P_new = min(P_new, 1200000)
-                pressure_mod_Pa.append(P_new)
+                        
+            
+            
 
-            df["Modified_Tank_Pressure_bar"] = np.array(pressure_mod_Pa) / 100000
-
-            # Approximate energy impact due to tank buffer effect
-            df["dE_kWh"] = 0.0
-            for i in range(1, len(df)):
-                P1 = pressure_mod_Pa[i-1]
-                P2 = pressure_mod_Pa[i]
-                if P2 > 0 and P1 > 0:
-                    try:
-                        dE = V_tank_mod * (P2 - P1) / (3600 * 1000)
-                    except ZeroDivisionError:
-                        dE = 0.0
-                else:
-                    dE = 0.0
-                df.at[df.index[i], "dE_kWh"] = dE
-
-            total_buffer_energy_kWh = df["dE_kWh"].sum()
-
-            st.line_chart(df.set_index("Timestamp")["Modified_Tank_Pressure_bar"], use_container_width=True)
-            st.metric("Total Buffer Energy Impact (kWh)", f"{total_buffer_energy_kWh:.2f}")
-            st.dataframe(df[["Timestamp", "Modified_Tank_Pressure_bar", "dE_kWh"]].tail(10))
-
+                    
+            
