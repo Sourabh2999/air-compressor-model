@@ -139,11 +139,12 @@ if uploaded_file:
 
         if all(col in df.columns for col in [on_col, power_col, intake_temp_col, discharge_temp_col, pressure_col]):
             comp_df = df[(df[on_col] == 1) & (df[power_col] > 3)].copy()
+            delta_temp = (comp_df[discharge_temp_col] - comp_df[intake_temp_col]).abs()
             valid = (
                 (comp_df[pressure_col] > ambient_pressure_bar * 1.1) &
                 (comp_df[intake_temp_col] > 0) &
                 (comp_df[discharge_temp_col] > 0) &
-                ((comp_df[discharge_temp_col] - comp_df[intake_temp_col]).abs() > 5)
+                (delta_temp > 2)
             )
             comp_df = comp_df[valid]
 
