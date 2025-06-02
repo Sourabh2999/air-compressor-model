@@ -144,7 +144,7 @@ if uploaded_file:
                 (comp_df[pressure_col] > ambient_pressure_bar * 1.1) &
                 (comp_df[intake_temp_col] > 0) &
                 (comp_df[discharge_temp_col] > 0) &
-                (delta_temp > 2)
+                (delta_temp > 5)
             )
             comp_df = comp_df[valid]
 
@@ -158,6 +158,12 @@ if uploaded_file:
             n_vals = n_vals.replace([np.inf, -np.inf], np.nan).dropna()
 
             df.loc[comp_df.index, f'n_{i}'] = n_vals
+            if not n_vals.empty:
+                avg_n = n_vals.mean()
+                st.markdown(f"**Compressor {i} – Average Polytropic Exponent (n):** {avg_n:.3f}")
+            else:
+                st.markdown(f"**Compressor {i} – Average Polytropic Exponent (n):** Not Available")
+
 
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
