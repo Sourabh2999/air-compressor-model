@@ -104,56 +104,71 @@ if uploaded_file:
     df.rename(columns=lambda x: x.strip(), inplace=True)
 
     rename_map = {
-        "C1 - delivery volume flow rate": "C1 - delivery volume flow rate",
-        "C2 - delivery volume flow rate": "C2 - delivery volume flow rate",
-        "C3 - delivery volume flow rate": "C3 - delivery volume flow rate",
-        "C1 - intake temperature": "Temp1",
-        "C2 - intake temperature": "Temp2",
-        "C3 - intake temperature": "Temp3",
-        "C1 - airend discharge temperature": "T2_1",
-        "C2 - airend discharge temperature": "T2_2",
-        "C3 - airend discharge temperature": "T2_3",
-        "C1 - local net pressure": "P2_1",
-        "C2 - local net pressure": "P2_2",
-        "C3 - local net pressure": "P2_3",
-        "C1 - electrical power consumption": "Power1",
-        "C2 - electrical power consumption": "Power2",
-        "C3 - electrical power consumption": "Power3"
-    }
+    "C1 - delivery volume flow rate": "C1 - delivery volume flow rate",
+    "C2 - delivery volume flow rate": "C2 - delivery volume flow rate",
+    "C3 - delivery volume flow rate": "C3 - delivery volume flow rate",
+    "C1 - intake temperature": "Temp1",
+    "C2 - intake temperature": "Temp2",
+    "C3 - intake temperature": "Temp3",
+    "C1 - airend discharge temperature": "T2_1",
+    "C2 - airend discharge temperature": "T2_2",
+    "C3 - airend discharge temperature": "T2_3",
+    "C1 - local net pressure": "P2_1",
+    "C2 - local net pressure": "P2_2",
+    "C3 - local net pressure": "P2_3",
+    "C1 - electrical power consumption": "Power1",
+    "C2 - electrical power consumption": "Power2",
+    "C3 - electrical power consumption": "Power3",
+    "C1 On Time": "C1 On Time",
+    "C2 On Time": "C2 On Time",
+    "C3 On Time": "C3 On Time",
+    "Timestamp": "Timestamp"
+}
     df.rename(columns=rename_map, inplace=True)
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
 
     st.write("### File Preview")
     st.dataframe(df.head())
 
-    st.subheader("Polytropic Exponent (n) Calculation from Data")
-    for i in range(1, 4):
-        on_col = f"C{i} On Time"
-        power_col = f"Power{i}"
-        intake_temp_col = f"Temp{i}"
-        discharge_temp_col = f"T2_{i}"
-        pressure_col = f"P2_{i}"
+st.subheader("Polytropic Exponent (n) Calculation from Data")
 
-        if all(col in df.columns for col in [on_col, power_col, intake_temp_col, discharge_temp_col, pressure_col]):
-            comp_df = df[(df[on_col] == 1) & (df[power_col] > 3)].copy()
-            valid = (
-                (comp_df[pressure_col] > ambient_pressure_bar * 1.1) &
-                (comp_df[intake_temp_col] > 0) &
-                (comp_df[discharge_temp_col] > 0) &
-                ((comp_df[discharge_temp_col] - comp_df[intake_temp_col]).abs() > 5)
-            )
-            comp_df = comp_df[valid]
+for i in range(1, 4):
+    on_col = f"C{i} On Time"
+    power_col = f"Power{i}"
+    intake_temp_col = f"Temp{i}"
+    discharge_temp_col = f"T2_{i}"
+    pressure_col = f"P2_{i}"
 
-            P1 = ambient_pressure_bar
-            P2 = comp_df[pressure_col]
-            T1 = comp_df[intake_temp_col] + 273.15
-            T2 = comp_df[discharge_temp_col] + 273.15
+    # Check if all necessary columns are present
+    if all(col in df.columns for col in [on_col, power_col, intake_temp_col, discharge_temp_col, pressure_col]):
+        comp_df = df[(df[on_col] == 1) & (df[power_col] > 3)].copy()
+
+        # Apply valid data filtering
+        valid = (
+            (comp_df[pressure_col] > ambient_pressure_bar * 1.1) &
+            (comp_df[intake_temp_col] > 0) &
+            (comp_df[discharge_temp_col] > 0) &
+            ((comp_df[discharge_temp_col] - comp_df[intake_temp_col]).abs() > 5)
+        )
+        comp_df = comp_df[valid]
+
+        if not comp_df.empty:
+            P1 = ambient_pressure_bar  # in bar
+            P2 = comp_df[pressure_col]  # in bar
+            T1 = comp_df[intake_temp_col] + 273.15  # in Kelvin
+            T2 = comp_df[discharge_temp_col] + 273.15  # in Kelvin
 
             V1_by_V2 = (T1 * P2) / (T2 * P1)
             n_vals = np.log(P2 / P1) / np.log(V1_by_V2)
             n_vals = n_vals.replace([np.inf, -np.inf], np.nan).dropna()
 
             df.loc[comp_df.index, f'n_{i}'] = n_vals
+
+            st.success(f"Compressor {i}: Calculated {n_vals.count()} valid 'n' values.")
+        else:
+            st.warning(f"Compressor {i}: No valid rows after filtering.")
+    else:
+        st.error(f"Compressor {i}: Missing required columns for n calculation.")
 
     st.subheader("Real Compressor Efficiency Summary")
     summaries = []
