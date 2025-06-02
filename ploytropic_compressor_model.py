@@ -118,7 +118,10 @@ if uploaded_file:
         "C3 - local net pressure": "P2_3",
         "C1 - electrical power consumption": "Power1",
         "C2 - electrical power consumption": "Power2",
-        "C3 - electrical power consumption": "Power3"
+        "C3 - electrical power consumption": "Power3",
+        "C1 On Time": "C1 On Time",
+        "C2 On Time": "C2 On Time",
+        "C3 On Time": "C3 On Time"
     }
     df.rename(columns=rename_map, inplace=True)
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
