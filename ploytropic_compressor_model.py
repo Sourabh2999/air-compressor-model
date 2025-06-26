@@ -219,7 +219,7 @@ if uploaded_file:
 
         # Step 4: Effectiveness and Carbon Emission Evaluation
         st.subheader("Effectiveness and Carbon Emission Evaluation")
-        with st.expander("🔁 Compare with Modified Configuration"):
+        with st.expander("Compare with Modified Configuration"):
             mod_receiver_tank_liters = st.number_input("Modified Receiver Tank Volume (liters)", min_value=100.0, value=receiver_tank_liters, step=50.0)
             mod_receiver_tank_m3 = mod_receiver_tank_liters / 1000.0
             mod_set_pressure_bar = st.number_input("Modified Set Pressure (bar)", value=set_pressure_bar)
@@ -354,7 +354,7 @@ if uploaded_file:
                 df_summary = pd.DataFrame(effectiveness_rows)
                 st.dataframe(df_summary)
 
-                st.write("### 🌍 Carbon Emissions (TCO₂e)")
+                st.write("### Carbon Emissions (TCO₂e)")
                 co2_factor = 0.341 / 1000  # TCO₂e per kWh
                 tco2e_base = total_energy_base * co2_factor
                 tco2e_mod = total_energy_mod * co2_factor
