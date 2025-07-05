@@ -267,28 +267,28 @@ if uploaded_file:
                 Q_out = df["Q_out"].iloc[idx]
                 dt = df["dt"].iloc[idx]
                 dP = (R * T * rho / V_tank_mod) * (Q_in - Q_out) * dt            #Equation for calculating the pressure change of tank due to Qin - Qout
-                P_new = pressure_mod_Pa[-1] + dP
+                P_new = pressure_mod_Pa[-1] + dP                                 #updated the current pressure by adding this to latest pressure from list
                 P_new = max(P_new, 100000)
                 P_new = min(P_new, 1200000)
                 pressure_mod_Pa.append(P_new)
 
-            df["Modified_Tank_Pressure_bar"] = np.array(pressure_mod_Pa) / 100000
+            df["Modified_Tank_Pressure_bar"] = np.array(pressure_mod_Pa) / 100000        #Simulated pressure is saved in array in bar
 
             # Approximate energy impact due to tank buffer effect
             df["dE_kWh"] = 0.0
             for i in range(1, len(df)):
-                P1 = pressure_mod_Pa[i-1]
-                P2 = pressure_mod_Pa[i]
+                P1 = pressure_mod_Pa[i-1]                                           #last output pressure 
+                P2 = pressure_mod_Pa[i]                                             #Current output pressure
                 if P2 > 0 and P1 > 0:
                     try:
-                        dE = V_tank_mod * (P2 - P1) / (3600 * 1000)
+                        dE = V_tank_mod * (P2 - P1) / (3600 * 1000)                #energy required for tank buffer effect
                     except ZeroDivisionError:
                         dE = 0.0
                 else:
                     dE = 0.0
                 df.at[df.index[i], "dE_kWh"] = dE
 
-            total_buffer_energy_kWh = df["dE_kWh"].sum()
+            total_buffer_energy_kWh = df["dE_kWh"].sum()                            #total buffer energy
             for i in range(1, 4):
                 flow_col = f"C{i} - delivery volume flow rate"
                 temp_col = f"Temp{i}"
