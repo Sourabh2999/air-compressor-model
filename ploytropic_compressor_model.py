@@ -248,17 +248,17 @@ if uploaded_file:
 
             # Flow preprocessing
             for i in range(1, 4):
-                df[f"C{i}_flow_m3s"] = df[f"C{i} - delivery volume flow rate"] / 60
-                df[f"C{i}_on"] = df[f"C{i} On Time"]
+                df[f"C{i}_flow_m3s"] = df[f"C{i} - delivery volume flow rate"] / 60  #each compressor delivery_volume_flow_rate used for Qout in m3/s
+                df[f"C{i}_on"] = df[f"C{i} On Time"]                                 #Compressor ON Time
 
-            df["Q_in"] = sum(df[f"C{i}_flow_m3s"] * df[f"C{i}_on"] for i in range(1, 4))
-            df["Q_out"] = df["CO1 - consumption volume flow rate"] / 60
-            df["dt"] = df["Timestamp"].diff().dt.total_seconds().fillna(0)
+            df["Q_in"] = sum(df[f"C{i}_flow_m3s"] * df[f"C{i}_on"] for i in range(1, 4))  #delivery volume flow rate for ON Time
+            df["Q_out"] = df["CO1 - consumption volume flow rate"] / 60               #consumption volume flow rate for Qout in m3/s
+            df["dt"] = df["Timestamp"].diff().dt.total_seconds().fillna(0)            #Timedifference for dt in s
 
             # Initial pressure
-            initial_pressure_bar = df["CO1 - net pressure"].iloc[0]
-            initial_pressure_Pa = initial_pressure_bar * 100000
-            V_tank_mod = mod_receiver_tank_liters / 1000.0
+            initial_pressure_bar = df["CO1 - net pressure"].iloc[0]                #initial pressure Pa taken from C01 net pressure
+            initial_pressure_Pa = initial_pressure_bar * 100000                    #converted to Pa
+            V_tank_mod = mod_receiver_tank_liters / 1000.0                         #modified pressure in bar
 
             # Pressure simulation
             pressure_mod_Pa = [initial_pressure_Pa]
@@ -266,7 +266,7 @@ if uploaded_file:
                 Q_in = df["Q_in"].iloc[idx]
                 Q_out = df["Q_out"].iloc[idx]
                 dt = df["dt"].iloc[idx]
-                dP = (R * T * rho / V_tank_mod) * (Q_in - Q_out) * dt
+                dP = (R * T * rho / V_tank_mod) * (Q_in - Q_out) * dt            #Equation for calculating the pressure change of tank due to Qin - Qout
                 P_new = pressure_mod_Pa[-1] + dP
                 P_new = max(P_new, 100000)
                 P_new = min(P_new, 1200000)
